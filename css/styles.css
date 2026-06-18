@@ -43,6 +43,8 @@ header.site {
   background: rgba(11, 15, 23, 0.9);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
+  /* 全螢幕 app 模式下，把內容推到瀏海/狀態列下方 */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .site-inner { display: flex; align-items: center; gap: 14px; height: 56px; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: .3px; }

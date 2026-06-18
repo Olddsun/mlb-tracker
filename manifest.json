@@ -1,0 +1,15 @@
+{
+  "name": "對戰紀錄",
+  "short_name": "對戰紀錄",
+  "description": "Scott vs Alvin 的 MLB The Show 對戰紀錄",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "start_url": "./",
+  "scope": "./",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
