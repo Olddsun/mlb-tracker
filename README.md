@@ -1,6 +1,6 @@
-# MLB The Show 對戰紀錄 — Scott vs Alvin
+# E-Sport League — Scott vs Alvin
 
-兩人單挑 MLB The Show 的對戰結果與數據紀錄。純靜態網站，部署於 GitHub Pages。
+Scott 與 Alvin 的電競對戰聯盟，記錄對戰結果與數據。目前為 MLB The Show，未來會加入 NBA 2K。純靜態網站，部署於 GitHub Pages，可加入 iPhone 主畫面當 app。
 
 **線上網址**：https://olddsun.github.io/mlb-tracker/
 

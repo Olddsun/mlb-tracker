@@ -1,18 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#5a97ff"/>
-      <stop offset="1" stop-color="#3464c8"/>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#16203360"/>
+      <stop offset="0" stop-color="#172339"/>
+      <stop offset="1" stop-color="#0b0f17"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f8ef7"/>
+      <stop offset="1" stop-color="#1c3a78"/>
     </linearGradient>
-    <linearGradient id="gold" x1="1" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f8b73f"/>
+    <linearGradient id="goldg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8c34f"/>
       <stop offset="1" stop-color="#e2870f"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" fill="#0b0f17"/>
-  <polygon points="648,0 1024,0 1024,1024 376,1024" fill="url(#gold)"/>
-  <polygon points="0,0 648,0 376,1024 0,1024" fill="url(#blue)"/>
-  <line x1="648" y1="0" x2="376" y2="1024" stroke="#ffffff" stroke-width="26"/>
-  <text x="296" y="468" font-family="'Helvetica Neue',Arial,sans-serif" font-size="430" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="central">S</text>
-  <text x="732" y="592" font-family="'Helvetica Neue',Arial,sans-serif" font-size="430" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="central">A</text>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- 頂部星星 -->
+  <polygon fill="url(#goldg)" points="512,105 535.5,172.6 607.1,174.1 550,217.4 570.8,285.9 512,245 453.2,285.9 474,217.4 416.9,174.1 488.5,172.6"/>
+
+  <!-- 盾牌 -->
+  <path d="M 300,300 L 724,300 L 724,540 Q 724,724 512,802 Q 300,724 300,540 Z"
+        fill="url(#shield)" stroke="url(#goldg)" stroke-width="22" stroke-linejoin="round"/>
+
+  <!-- ESL 字樣 -->
+  <text x="512" y="492" font-family="'Helvetica Neue',Arial,sans-serif" font-size="186" font-weight="800"
+        fill="#ffffff" text-anchor="middle" dominant-baseline="central" letter-spacing="6">ESL</text>
+
+  <!-- 金色分隔線 -->
+  <rect x="384" y="600" width="256" height="12" rx="6" fill="url(#goldg)"/>
 </svg>

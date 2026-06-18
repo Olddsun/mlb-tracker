@@ -1,7 +1,7 @@
 {
-  "name": "對戰紀錄",
-  "short_name": "對戰紀錄",
-  "description": "Scott vs Alvin 的 MLB The Show 對戰紀錄",
+  "name": "E-Sport League",
+  "short_name": "E-Sport League",
+  "description": "Scott vs Alvin 的電競對戰聯盟（MLB The Show、NBA 2K）",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0b0f17",
