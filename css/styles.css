@@ -48,17 +48,7 @@ header.site {
 }
 .site-inner { display: flex; align-items: center; gap: 14px; height: 56px; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: .3px; }
-.brand .ball {
-  width: 24px; height: 24px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fff, #d7dde6);
-  position: relative; flex: none; box-shadow: inset 0 0 0 2px #c2cad6;
-}
-.brand .ball::before, .brand .ball::after {
-  content: ''; position: absolute; top: 4px; bottom: 4px; width: 6px;
-  border: 1.5px solid var(--loss); border-radius: 50%;
-}
-.brand .ball::before { left: 2px; border-right: none; }
-.brand .ball::after { right: 2px; border-left: none; }
+.brand .brand-logo { width: 30px; height: 30px; border-radius: 8px; flex: none; display: block; }
 
 /* top nav: 手機隱藏，桌面顯示 */
 nav.tabs.top { display: none; }
