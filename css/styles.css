@@ -12,6 +12,8 @@
   --win: #22c55e;
   --loss: #f05252;
   --gold: #f5a524;
+  --scott: #4f8ef7;
+  --alvin: #f5a524;
   --radius: 14px;
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -89,7 +91,27 @@ main { padding-top: 18px; }
 .h2h-player .name { font-size: clamp(19px, 6vw, 34px); font-weight: 700; }
 .h2h-player .wins { font-family: 'Fira Code', monospace; font-size: clamp(46px, 16vw, 72px); font-weight: 700; line-height: 1; margin-top: 4px; }
 .h2h-player .wr { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.h2h-player .name.scott { color: var(--scott); }
+.h2h-player .name.alvin { color: var(--alvin); }
 .h2h-player.leader .wins { color: var(--win); }
+
+/* ---------- Player comparison ---------- */
+.compare { padding: 20px 16px; box-shadow: var(--shadow); margin-top: 12px; }
+.cmp-names { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; font-weight: 700; font-size: 16px; }
+.cmp-names .s { color: var(--scott); }
+.cmp-names .a { color: var(--alvin); }
+.cmp-names .mid { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+.cmp-stat { margin-bottom: 16px; }
+.cmp-stat:last-child { margin-bottom: 0; }
+.cmp-vals { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 8px; }
+.cmp-vals .v { font-family: 'Fira Code', monospace; font-size: 22px; font-weight: 700; color: var(--muted); flex: none; min-width: 44px; }
+.cmp-vals .v.r { text-align: right; }
+.cmp-vals .v.lead-s { color: var(--scott); }
+.cmp-vals .v.lead-a { color: var(--alvin); }
+.cmp-vals .lab { font-size: 13px; color: var(--text); font-weight: 500; text-align: center; flex: 1; }
+.cmp-bar { height: 8px; border-radius: 4px; background: var(--surface-2); display: flex; overflow: hidden; }
+.cmp-bar .seg-s { background: var(--scott); transition: width .3s; }
+.cmp-bar .seg-a { background: var(--alvin); transition: width .3s; }
 .h2h-vs { font-size: clamp(15px, 4vw, 22px); font-weight: 700; color: var(--muted); flex: none; }
 .h2h-sub { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 

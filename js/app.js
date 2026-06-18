@@ -46,6 +46,19 @@ function recentForm(player, n = 5) {
   return DATA.games.slice(0, n).map(g => g.winner === player ? 'w' : 'l');
 }
 
+// 每位玩家的累積數據（只計有逐場數據的比賽）
+function playerTotals() {
+  const t = {};
+  PLAYERS.forEach(p => t[p] = { h: 0, hr: 0, so: 0, runs: 0, games: 0 });
+  DATA.games.forEach(g => g.sides.forEach(s => {
+    const x = t[s.player]; if (!x) return;
+    x.games++; x.runs += s.runs;
+    s.batting.forEach(b => { x.h += b.h || 0; x.hr += b.hr || 0; });
+    s.pitching.forEach(p => { x.so += p.so || 0; });
+  }));
+  return t;
+}
+
 // 隊伍戰績：依「玩家 + 隊伍」分開計算，Scott 的洋基 ≠ Alvin 的洋基
 function teamRecordsByPlayer() {
   const rec = {};
@@ -102,13 +115,10 @@ function viewHome() {
   const { wins, total } = headToHead();
   const leader = wins.Scott === wins.Alvin ? null : (wins.Scott > wins.Alvin ? 'Scott' : 'Alvin');
   const wr = (p) => total ? Math.round(wins[p] / total * 100) : 0;
-  const form = recentForm(leader || 'Scott');
-  const totalRuns = DATA.games.reduce((a, g) => a + g.sides.reduce((b, s) => b + s.runs, 0), 0);
-  const totalHr = DATA.games.reduce((a, g) => a + (g.notes?.hr?.length || 0), 0);
 
   const playerBlock = (p) => `
     <div class="h2h-player ${leader === p ? 'leader' : ''}">
-      <div class="name">${p}</div>
+      <div class="name ${p.toLowerCase()}">${p}</div>
       <div class="wins mono">${wins[p]}</div>
       <div class="wr">勝率 ${wr(p)}%</div>
     </div>`;
@@ -125,15 +135,47 @@ function viewHome() {
       </div>
     </div>
 
-    <div class="stat-row">
-      <div class="stat-box"><div class="v mono">${total}</div><div class="l">總場數</div></div>
-      <div class="stat-box"><div class="v mono">${total ? (totalRuns / total).toFixed(1) : '0'}</div><div class="l">場均總得分</div></div>
-      <div class="stat-box"><div class="v mono">${totalHr}</div><div class="l">全壘打數</div></div>
-    </div>
+    ${compareCard()}
 
     <div class="section-title">近期對戰</div>
-    ${DATA.games.slice(0, 4).map(gameCard).join('')}
+    ${DATA.games.length ? DATA.games.slice(0, 4).map(gameCard).join('') : '<div class="empty" style="padding:24px">尚無逐場數據。</div>'}
   `;
+}
+
+function compareCard() {
+  const t = playerTotals();
+  const stats = [
+    { key: 'h', lab: '累積安打' },
+    { key: 'hr', lab: '累積全壘打' },
+    { key: 'so', lab: '累積三振（投手）' },
+    { key: 'runs', lab: '平均得分', avg: true }
+  ];
+  const rows = stats.map(st => {
+    let sNum, aNum, sDisp, aDisp;
+    if (st.avg) {
+      sNum = t.Scott.games ? t.Scott[st.key] / t.Scott.games : 0;
+      aNum = t.Alvin.games ? t.Alvin[st.key] / t.Alvin.games : 0;
+      sDisp = sNum.toFixed(1); aDisp = aNum.toFixed(1);
+    } else {
+      sNum = t.Scott[st.key]; aNum = t.Alvin[st.key];
+      sDisp = sNum; aDisp = aNum;
+    }
+    const tot = sNum + aNum;
+    const sPct = tot > 0 ? sNum / tot * 100 : 50;
+    const lead = sNum > aNum ? 's' : aNum > sNum ? 'a' : '';
+    return `<div class="cmp-stat">
+        <div class="cmp-vals">
+          <span class="v ${lead === 's' ? 'lead-s' : ''}">${sDisp}</span>
+          <span class="lab">${st.lab}</span>
+          <span class="v r ${lead === 'a' ? 'lead-a' : ''}">${aDisp}</span>
+        </div>
+        <div class="cmp-bar"><span class="seg-s" style="width:${sPct}%"></span><span class="seg-a" style="width:${100 - sPct}%"></span></div>
+      </div>`;
+  }).join('');
+  return `<div class="card compare">
+      <div class="cmp-names"><span class="s">Scott</span><span class="mid">數據對比</span><span class="a">Alvin</span></div>
+      ${rows}
+    </div>`;
 }
 
 function gameCard(g) {
