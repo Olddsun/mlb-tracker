@@ -1,0 +1,68 @@
+{
+  "players": ["Scott", "Alvin"],
+  "baseline": { "note": "開始記錄前的 3 場（無數據）", "games": 3, "wins": { "Scott": 1, "Alvin": 2 } },
+  "games": [
+    {
+      "id": "2026-06-18-01",
+      "date": "2026-06-18",
+      "winner": "Alvin",
+      "playerOfGame": { "name": "Max Fried", "team": "Yankees" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Phillies",
+          "teamFull": "Philadelphia Phillies",
+          "homeAway": "away",
+          "runs": 0,
+          "hits": 5,
+          "errors": 1,
+          "innings": ["0", "0", "0", "0", "0", "0", "0", "0", "0"],
+          "batting": [
+            { "name": "Trea Turner", "pos": "SS", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Kyle Schwarber", "pos": "DH", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Bryce Harper", "pos": "1B", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Alec Bohm", "pos": "3B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Brandon Marsh", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Adolis García", "pos": "RF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "J.T. Realmuto", "pos": "C", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Bryson Stott", "pos": "2B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Justin Crawford", "pos": "CF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 }
+          ],
+          "pitching": [
+            { "name": "Cristopher Sánchez", "decision": "L", "record": "13-5", "ip": "7.1", "h": 5, "r": 2, "er": 2, "bb": 1, "so": 9 },
+            { "name": "Brad Keller", "decision": "", "record": "", "ip": "0.2", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 1 }
+          ]
+        },
+        {
+          "player": "Alvin",
+          "team": "Yankees",
+          "teamFull": "New York Yankees",
+          "homeAway": "home",
+          "runs": 2,
+          "hits": 5,
+          "errors": 0,
+          "innings": ["0", "0", "0", "1", "1", "0", "0", "0", "X"],
+          "batting": [
+            { "name": "Trent Grisham", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 4 },
+            { "name": "Aaron Judge", "pos": "RF", "ab": 3, "r": 1, "h": 1, "rbi": 1, "bb": 0, "so": 2, "hr": 1 },
+            { "name": "Cody Bellinger", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Giancarlo Stanton", "pos": "DH", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Paul Goldschmidt", "pos": "1B", "ab": 3, "r": 1, "h": 2, "rbi": 1, "bb": 0, "so": 0, "hr": 1 },
+            { "name": "Jazz Chisholm Jr.", "pos": "2B", "ab": 2, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Ryan McMahon", "pos": "3B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "José Caballero", "pos": "SS", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Austin Wells", "pos": "C", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Max Fried", "decision": "W", "record": "19-5", "ip": "9.0", "h": 5, "r": 0, "er": 0, "bb": 0, "so": 3 }
+          ]
+        }
+      ],
+      "notes": {
+        "hr": ["Aaron Judge", "Paul Goldschmidt"],
+        "sb": [{ "name": "Trea Turner", "count": 2 }],
+        "errors": ["Brandon Marsh"]
+      }
+    }
+  ]
+}

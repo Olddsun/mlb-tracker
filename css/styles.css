@@ -1,0 +1,221 @@
+/* ============ MLB The Show Tracker — broadcast dark theme (mobile-first) ============ */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0b0f17;
+  --surface: #151b27;
+  --surface-2: #1d2533;
+  --border: #2a3342;
+  --text: #e6edf3;
+  --muted: #8b98a9;
+  --accent: #4f8ef7;
+  --win: #22c55e;
+  --loss: #f05252;
+  --gold: #f5a524;
+  --radius: 14px;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  /* 底部留空給 mobile bottom nav */
+  padding-bottom: calc(64px + var(--safe-b));
+}
+
+.mono { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration: none; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 14px; }
+
+/* ---------- Header ---------- */
+header.site {
+  position: sticky; top: 0; z-index: 30;
+  background: rgba(11, 15, 23, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.site-inner { display: flex; align-items: center; gap: 14px; height: 56px; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: .3px; }
+.brand .ball {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #d7dde6);
+  position: relative; flex: none; box-shadow: inset 0 0 0 2px #c2cad6;
+}
+.brand .ball::before, .brand .ball::after {
+  content: ''; position: absolute; top: 4px; bottom: 4px; width: 6px;
+  border: 1.5px solid var(--loss); border-radius: 50%;
+}
+.brand .ball::before { left: 2px; border-right: none; }
+.brand .ball::after { right: 2px; border-left: none; }
+
+/* top nav: 手機隱藏，桌面顯示 */
+nav.tabs.top { display: none; }
+
+/* ---------- Bottom nav (mobile) ---------- */
+.bottom-tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex;
+  background: rgba(17, 22, 33, 0.96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-b);
+}
+.bottom-tabs a {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; min-height: 58px; color: var(--muted); font-size: 11px; font-weight: 500;
+  cursor: pointer; transition: color .2s;
+}
+.bottom-tabs a svg { width: 23px; height: 23px; }
+.bottom-tabs a.active { color: var(--accent); }
+.bottom-tabs a:active { background: var(--surface-2); }
+
+/* ---------- Generic ---------- */
+.section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 24px 0 11px; font-weight: 600; }
+main { padding-top: 18px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* ---------- Head-to-head hero ---------- */
+.h2h { padding: 22px 16px; box-shadow: var(--shadow); }
+.h2h-top { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 4vw, 48px); }
+.h2h-player { text-align: center; flex: 1; min-width: 0; }
+.h2h-player .name { font-size: clamp(19px, 6vw, 34px); font-weight: 700; }
+.h2h-player .wins { font-family: 'Fira Code', monospace; font-size: clamp(46px, 16vw, 72px); font-weight: 700; line-height: 1; margin-top: 4px; }
+.h2h-player .wr { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.h2h-player.leader .wins { color: var(--win); }
+.h2h-vs { font-size: clamp(15px, 4vw, 22px); font-weight: 700; color: var(--muted); flex: none; }
+.h2h-sub { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 8px; text-align: center; }
+.stat-box .v { font-family: 'Fira Code', monospace; font-size: clamp(22px, 6vw, 28px); font-weight: 700; }
+.stat-box .l { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+
+/* ---------- Game cards ---------- */
+.game-card { padding: 14px 16px; margin-bottom: 11px; cursor: pointer; transition: border-color .2s, transform .15s; box-shadow: var(--shadow); }
+.game-card:active { transform: scale(.99); }
+.game-card .gc-date { font-size: 12px; color: var(--muted); margin-bottom: 8px; letter-spacing: .5px; }
+.gc-side { display: flex; align-items: center; gap: 11px; padding: 5px 0; }
+.gc-side .tcolor { width: 5px; height: 30px; border-radius: 3px; flex: none; }
+.gc-side .who { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.gc-side .who .pl { font-weight: 600; font-size: 15px; }
+.gc-side .who .tm { font-size: 12px; color: var(--muted); }
+.gc-side .score { margin-left: auto; font-family: 'Fira Code', monospace; font-size: 26px; font-weight: 700; }
+.gc-side.win .score { color: var(--win); }
+.gc-side.win .pl::after { content: 'W'; font-family: 'Fira Code', monospace; font-size: 10px; background: var(--win); color: #04210f; padding: 1px 5px; border-radius: 4px; margin-left: 7px; vertical-align: middle; font-weight: 700; }
+
+/* ---------- Game detail ---------- */
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 15px; margin-bottom: 16px; cursor: pointer; min-height: 44px; }
+.back:active { color: var(--text); }
+.detail-head { padding: 18px 16px; box-shadow: var(--shadow); margin-bottom: 8px; }
+.dh-line { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.dh-line .tcolor { width: 6px; height: 36px; border-radius: 3px; flex: none; }
+.dh-line .lbl { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.dh-line .lbl .pl { font-weight: 700; font-size: 17px; }
+.dh-line .lbl .tm { font-size: 13px; color: var(--muted); }
+.dh-line .runs { margin-left: auto; font-family: 'Fira Code', monospace; font-size: 32px; font-weight: 700; }
+.dh-line.win .runs { color: var(--win); }
+.pog { text-align: center; font-size: 13px; color: var(--gold); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ---------- Scrollable tables w/ sticky first column ---------- */
+.tbl-scroll, .linescore-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* line score */
+.linescore-wrap { margin: 8px 0; border: 1px solid var(--border); border-radius: var(--radius); }
+table.linescore { border-collapse: separate; border-spacing: 0; font-family: 'Fira Code', monospace; font-size: 14px; width: 100%; min-width: 420px; }
+table.linescore th, table.linescore td { padding: 8px 7px; text-align: center; border-bottom: 1px solid var(--border); }
+table.linescore tr:last-child td { border-bottom: none; }
+table.linescore th { color: var(--muted); font-weight: 500; font-size: 12px; }
+table.linescore .team, table.linescore th.teamh {
+  text-align: left; font-family: 'Fira Sans'; font-weight: 600; white-space: nowrap;
+  position: sticky; left: 0; background: var(--surface); z-index: 2; padding-left: 12px; padding-right: 12px;
+}
+table.linescore td.rhe { font-weight: 700; }
+table.linescore .sep { border-left: 2px solid var(--border); }
+
+/* box score tables */
+.box-team { margin-top: 20px; }
+.box-team h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.box-team h3 .tcolor { width: 4px; height: 17px; border-radius: 2px; }
+.box-team .tbl-scroll { border: 1px solid var(--border); border-radius: var(--radius); }
+table.stats { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; min-width: 430px; }
+table.stats th, table.stats td { padding: 9px 7px; border-bottom: 1px solid var(--border); }
+table.stats thead th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; background: var(--surface-2); }
+table.stats th.l, table.stats td.l { text-align: left; }
+table.stats th.n, table.stats td.n { text-align: right; font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; width: 42px; }
+table.stats .player {
+  font-weight: 500; white-space: nowrap;
+  position: sticky; left: 0; background: var(--surface); z-index: 2; padding-left: 12px;
+}
+table.stats thead .player { background: var(--surface-2); }
+table.stats td.player .pos { color: var(--muted); font-size: 12px; margin-left: 5px; }
+table.stats tr.totals td { font-weight: 700; border-top: 2px solid var(--border); color: var(--text); }
+table.stats tr.totals .player { background: var(--surface); }
+table.stats tr:last-child td { border-bottom: none; }
+table.stats td.hl { color: var(--gold); }
+.hr-tag { font-size: 10px; background: var(--gold); color: #2a1c00; border-radius: 4px; padding: 0 5px; margin-left: 6px; font-family: 'Fira Code', monospace; font-weight: 700; }
+
+.notes-line { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.8; }
+.notes-line b { color: var(--text); font-weight: 600; }
+
+/* ---------- Team / player ranking tables ---------- */
+.tbl-card { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.tbl-card .tbl-scroll { border: none; }
+table.rank { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 14px; min-width: 480px; }
+table.rank th, table.rank td { padding: 11px 9px; border-bottom: 1px solid var(--border); text-align: right; }
+table.rank tr:last-child td { border-bottom: none; }
+table.rank thead th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; background: var(--surface-2); }
+table.rank th.l, table.rank td.l { text-align: left; }
+table.rank td.name {
+  font-weight: 600; white-space: nowrap;
+  position: sticky; left: 0; background: var(--surface); z-index: 2; padding-left: 12px;
+}
+table.rank thead th.l { position: sticky; left: 0; background: var(--surface-2); z-index: 2; padding-left: 12px; }
+table.rank tbody tr:active td.name { background: var(--surface-2); }
+table.rank td.num { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
+table.rank .tcolor { display: inline-block; width: 4px; height: 14px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+
+.empty { text-align: center; color: var(--muted); padding: 50px 18px; }
+.toggle { display: inline-flex; gap: 4px; background: var(--surface-2); border-radius: 11px; padding: 4px; margin-bottom: 13px; }
+.toggle button { background: none; border: none; color: var(--muted); font: inherit; font-size: 14px; padding: 0 18px; min-height: 40px; border-radius: 8px; cursor: pointer; transition: .2s; }
+.toggle button.active { background: var(--accent); color: #fff; }
+.scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 2px 0; display: flex; align-items: center; gap: 5px; }
+
+/* ============ Desktop (≥ 720px) ============ */
+@media (min-width: 720px) {
+  body { padding-bottom: 40px; }
+  .wrap { padding: 0 20px; }
+  .site-inner { height: 62px; gap: 18px; }
+  .brand { font-size: 18px; }
+
+  nav.tabs.top { display: flex; gap: 4px; margin-left: auto; }
+  nav.tabs.top a {
+    padding: 9px 15px; border-radius: 9px; font-size: 14px; font-weight: 500;
+    color: var(--muted); cursor: pointer; transition: color .2s, background .2s; white-space: nowrap;
+  }
+  nav.tabs.top a:hover { color: var(--text); background: var(--surface-2); }
+  nav.tabs.top a.active { color: #fff; background: var(--accent); }
+
+  .bottom-tabs { display: none; }
+
+  .h2h { padding: 28px 24px; }
+  .stat-row { gap: 12px; }
+  .stat-box { padding: 18px; }
+  .game-card { padding: 16px 18px; }
+  .game-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .detail-head { padding: 22px 24px; }
+
+  /* 桌面寬度夠，表格不需要 sticky 也不會擠，但保留無妨 */
+  table.stats th.n, table.stats td.n { width: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
