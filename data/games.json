@@ -1,6 +1,5 @@
 {
   "players": ["Scott", "Alvin"],
-  "baseline": { "note": "開始記錄前的 3 場（無數據）", "games": 3, "wins": { "Scott": 1, "Alvin": 2 } },
   "games": [
     {
       "id": "2026-06-18-01",
