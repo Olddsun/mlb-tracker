@@ -49,12 +49,12 @@ function recentForm(player, n = 5) {
 // 每位玩家的累積數據（只計有逐場數據的比賽）
 function playerTotals() {
   const t = {};
-  PLAYERS.forEach(p => t[p] = { h: 0, hr: 0, so: 0, runs: 0, games: 0 });
+  PLAYERS.forEach(p => t[p] = { h: 0, hr: 0, so: 0, runs: 0, games: 0, er: 0, outs: 0 });
   DATA.games.forEach(g => g.sides.forEach(s => {
     const x = t[s.player]; if (!x) return;
     x.games++; x.runs += s.runs;
     s.batting.forEach(b => { x.h += b.h || 0; x.hr += b.hr || 0; });
-    s.pitching.forEach(p => { x.so += p.so || 0; });
+    s.pitching.forEach(p => { x.so += p.so || 0; x.er += p.er || 0; x.outs += ipToOuts(p.ip); });
   }));
   return t;
 }
@@ -144,25 +144,32 @@ function viewHome() {
 
 function compareCard() {
   const t = playerTotals();
+  const eraNum = (p) => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null;
+  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : 0;
+
   const stats = [
-    { key: 'h', lab: '累積安打' },
-    { key: 'hr', lab: '累積全壘打' },
-    { key: 'so', lab: '累積三振（投手）' },
-    { key: 'runs', lab: '平均得分', avg: true }
+    { lab: '累積安打', s: t.Scott.h, a: t.Alvin.h },
+    { lab: '累積全壘打', s: t.Scott.hr, a: t.Alvin.hr },
+    { lab: '累積三振（投手）', s: t.Scott.so, a: t.Alvin.so },
+    { lab: '平均得分', s: avgRun('Scott'), a: avgRun('Alvin'), dp: 1 },
+    { lab: '團隊 ERA', s: eraNum('Scott'), a: eraNum('Alvin'), dp: 2, lowerBetter: true }
   ];
+
   const rows = stats.map(st => {
-    let sNum, aNum, sDisp, aDisp;
-    if (st.avg) {
-      sNum = t.Scott.games ? t.Scott[st.key] / t.Scott.games : 0;
-      aNum = t.Alvin.games ? t.Alvin[st.key] / t.Alvin.games : 0;
-      sDisp = sNum.toFixed(1); aDisp = aNum.toFixed(1);
+    const sNum = st.s, aNum = st.a;
+    const fmt = (v) => v == null ? '—' : (st.dp != null ? v.toFixed(st.dp) : v);
+    const sDisp = fmt(sNum), aDisp = fmt(aNum);
+    // 排名與長條（lowerBetter 時，數值低者領先、長條較長）
+    let lead = '', sw, aw;
+    if (sNum == null || aNum == null) { sw = aw = 1; }
+    else if (st.lowerBetter) {
+      lead = sNum < aNum ? 's' : aNum < sNum ? 'a' : '';
+      sw = aNum; aw = sNum; // 反向加權
     } else {
-      sNum = t.Scott[st.key]; aNum = t.Alvin[st.key];
-      sDisp = sNum; aDisp = aNum;
+      lead = sNum > aNum ? 's' : aNum > sNum ? 'a' : '';
+      sw = sNum; aw = aNum;
     }
-    const tot = sNum + aNum;
-    const sPct = tot > 0 ? sNum / tot * 100 : 50;
-    const lead = sNum > aNum ? 's' : aNum > sNum ? 'a' : '';
+    const sPct = (sw + aw) > 0 ? sw / (sw + aw) * 100 : 50;
     return `<div class="cmp-stat">
         <div class="cmp-vals">
           <span class="v ${lead === 's' ? 'lead-s' : ''}">${sDisp}</span>
@@ -172,6 +179,7 @@ function compareCard() {
         <div class="cmp-bar"><span class="seg-s" style="width:${sPct}%"></span><span class="seg-a" style="width:${100 - sPct}%"></span></div>
       </div>`;
   }).join('');
+
   return `<div class="card compare">
       <div class="cmp-names"><span class="s">Scott</span><span class="mid">數據對比</span><span class="a">Alvin</span></div>
       ${rows}

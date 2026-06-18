@@ -26,7 +26,7 @@
             { "name": "Adolis García", "pos": "RF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
             { "name": "J.T. Realmuto", "pos": "C", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
             { "name": "Bryson Stott", "pos": "2B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
-            { "name": "Justin Crawford", "pos": "CF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 }
+            { "name": "Justin Crawford", "pos": "CF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 }
           ],
           "pitching": [
             { "name": "Cristopher Sánchez", "decision": "L", "record": "13-5", "ip": "7.1", "h": 5, "r": 2, "er": 2, "bb": 1, "so": 9 },
