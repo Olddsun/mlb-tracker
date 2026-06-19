@@ -124,6 +124,72 @@
         "hr": ["Fernando Tatis Jr. 2", "Manny Machado 2", "Ramón Laureano", "Kerry Carpenter", "Riley Greene"],
         "errors": ["Kevin McGonigle"]
       }
+    },
+    {
+      "id": "2026-06-19-02",
+      "date": "2026-06-19",
+      "winner": "Alvin",
+      "playerOfGame": { "name": "Mookie Betts", "team": "Dodgers" },
+      "sides": [
+        {
+          "player": "Alvin",
+          "team": "Dodgers",
+          "teamFull": "Los Angeles Dodgers",
+          "homeAway": "away",
+          "runs": 3,
+          "hits": 9,
+          "errors": 0,
+          "innings": ["0", "0", "0", "2", "0", "1", "0", "0", "0"],
+          "batting": [
+            { "name": "Shohei Ohtani", "pos": "DH", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Andy Pages", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Mookie Betts", "pos": "SS", "ab": 4, "r": 2, "h": 2, "rbi": 1, "bb": 0, "so": 1, "hr": 1 },
+            { "name": "Freddie Freeman", "pos": "1B", "ab": 4, "r": 1, "h": 2, "rbi": 2, "bb": 0, "so": 1, "hr": 1 },
+            { "name": "Max Muncy", "pos": "3B", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Kyle Tucker", "pos": "RF", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Teoscar Hernández", "pos": "LF", "ab": 2, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 0 },
+            { "name": "Will Smith", "pos": "C", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Alex Freeland", "pos": "2B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Yoshinobu Yamamoto", "decision": "W", "record": "12-8", "ip": "6.2", "h": 5, "r": 2, "er": 2, "bb": 2, "so": 3 },
+            { "name": "Blake Treinen", "decision": "SV", "record": "2", "ip": "2.1", "h": 1, "r": 0, "er": 0, "bb": 0, "so": 2 }
+          ]
+        },
+        {
+          "player": "Scott",
+          "team": "Rangers",
+          "teamFull": "Texas Rangers",
+          "homeAway": "home",
+          "runs": 2,
+          "hits": 6,
+          "errors": 1,
+          "innings": ["0", "0", "0", "0", "2", "0", "0", "0", "0"],
+          "batting": [
+            { "name": "Brandon Nimmo", "pos": "RF", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 1, "so": 0 },
+            { "name": "Wyatt Langford", "pos": "LF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Corey Seager", "pos": "SS", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Jake Burger", "pos": "1B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Josh Smith", "pos": "2B", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Josh Jung", "pos": "3B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 0 },
+            { "name": "Joc Pederson", "pos": "DH", "ab": 2, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Sam Haggerty", "pos": "PR-DH", "ab": 2, "r": 1, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Evan Carter", "pos": "CF", "ab": 3, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Danny Jansen", "pos": "C", "ab": 3, "r": 0, "h": 2, "rbi": 1, "bb": 0, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Jacob deGrom", "decision": "", "record": "", "ip": "4.2", "h": 5, "r": 2, "er": 2, "bb": 1, "so": 6 },
+            { "name": "Jalen Beeks", "decision": "L", "record": "5-3", "ip": "1.1", "h": 3, "r": 1, "er": 1, "bb": 1, "so": 2 },
+            { "name": "Chris Martin", "decision": "", "record": "", "ip": "2.0", "h": 1, "r": 0, "er": 0, "bb": 2, "so": 1 },
+            { "name": "Jacob Latz", "decision": "", "record": "", "ip": "1.0", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 0 }
+          ]
+        }
+      ],
+      "notes": {
+        "hr": ["Mookie Betts", "Freddie Freeman"],
+        "sb": [{ "name": "Shohei Ohtani", "count": 2 }, { "name": "Josh Smith", "count": 3 }],
+        "errors": ["Corey Seager"]
+      }
     }
   ]
 }
