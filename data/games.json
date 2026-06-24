@@ -253,6 +253,71 @@
         "2b": ["Wilyer Abreu"],
         "sb": [{ "name": "Willson Contreras", "count": 1 }]
       }
+    },
+    {
+      "id": "2026-06-24-02",
+      "date": "2026-06-24",
+      "winner": "Alvin",
+      "playerOfGame": { "name": "Andy Pages", "team": "Dodgers" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Marlins",
+          "teamFull": "Miami Marlins",
+          "homeAway": "away",
+          "runs": 3,
+          "hits": 5,
+          "errors": 0,
+          "innings": ["0","0","1","0","0","0","0","0","2"],
+          "batting": [
+            { "name": "Jakob Marsee", "pos": "CF", "ab": 4, "r": 0, "h": 1, "rbi": 1, "bb": 0, "so": 2 },
+            { "name": "Xavier Edwards", "pos": "2B", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Agustín Ramírez", "pos": "C", "ab": 4, "r": 1, "h": 0, "rbi": 0, "bb": 1, "so": 2 },
+            { "name": "Otto Lopez", "pos": "SS", "ab": 4, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Christopher Morel", "pos": "1B", "ab": 4, "r": 0, "h": 1, "rbi": 2, "bb": 0, "so": 3 },
+            { "name": "Griffin Conine", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Graham Pauley", "pos": "DH", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Owen Caissie", "pos": "RF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Connor Norby", "pos": "3B", "ab": 3, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 2 }
+          ],
+          "pitching": [
+            { "name": "Eury Pérez", "decision": "", "record": "", "ip": "5.0", "h": 6, "r": 2, "er": 2, "bb": 0, "so": 7 },
+            { "name": "Anthony Bender", "decision": "L", "record": "3-5", "ip": "3.0", "h": 4, "r": 2, "er": 2, "bb": 0, "so": 3 }
+          ]
+        },
+        {
+          "player": "Alvin",
+          "team": "Dodgers",
+          "teamFull": "Los Angeles Dodgers",
+          "homeAway": "home",
+          "runs": 4,
+          "hits": 10,
+          "errors": 1,
+          "innings": ["0","0","1","0","1","0","0","1","1"],
+          "batting": [
+            { "name": "Shohei Ohtani", "pos": "DH", "ab": 4, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Andy Pages", "pos": "CF", "ab": 4, "r": 1, "h": 3, "rbi": 2, "bb": 0, "so": 1, "hr": 1 },
+            { "name": "Freddie Freeman", "pos": "1B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Mookie Betts", "pos": "SS", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Will Smith", "pos": "C", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Kyle Tucker", "pos": "RF", "ab": 4, "r": 1, "h": 2, "rbi": 1, "bb": 0, "so": 2, "hr": 1 },
+            { "name": "Max Muncy", "pos": "3B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Teoscar Hernández", "pos": "LF", "ab": 3, "r": 1, "h": 1, "rbi": 1, "bb": 0, "so": 1, "hr": 1 },
+            { "name": "Alex Freeland", "pos": "2B", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Yoshinobu Yamamoto", "decision": "", "record": "", "ip": "8.2", "h": 5, "r": 3, "er": 3, "bb": 1, "so": 12 },
+            { "name": "Blake Treinen", "decision": "W", "record": "2-7", "ip": "0.1", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 1 }
+          ]
+        }
+      ],
+      "notes": {
+        "hr": ["Kyle Tucker", "Teoscar Hernández", "Andy Pages"],
+        "2b": ["Andy Pages", "Xavier Edwards", "Christopher Morel"],
+        "3b": ["Connor Norby"],
+        "sb": [{ "name": "Jakob Marsee", "count": 1 }],
+        "errors": ["Will Smith"]
+      }
     }
   ]
 }
