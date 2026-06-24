@@ -81,14 +81,18 @@ function battingByOwner() {
   const m = {};
   DATA.games.forEach(g => g.sides.forEach(s => s.batting.forEach(b => {
     const key = s.player + '|' + b.name;
-    const p = m[key] || (m[key] = { owner: s.player, name: b.name, g: 0, ab: 0, r: 0, h: 0, rbi: 0, bb: 0, so: 0, hr: 0 });
+    const p = m[key] || (m[key] = { owner: s.player, name: b.name, team: s.team, g: 0, ab: 0, r: 0, h: 0, rbi: 0, bb: 0, so: 0, hr: 0 });
+    p.team = s.team;
     p.g++; p.ab += b.ab || 0; p.r += b.r || 0; p.h += b.h || 0;
     p.rbi += b.rbi || 0; p.bb += b.bb || 0; p.so += b.so || 0; p.hr += b.hr || 0;
   })));
   const byOwner = {};
   PLAYERS.forEach(p => byOwner[p] = []);
   Object.values(m).forEach(p => (byOwner[p.owner] = byOwner[p.owner] || []).push(p));
-  Object.values(byOwner).forEach(arr => arr.sort((a, b) => b.h - a.h || b.hr - a.hr));
+  Object.values(byOwner).forEach(arr => arr.sort((a, b) => {
+    const avgA = a.ab > 0 ? a.h / a.ab : 0, avgB = b.ab > 0 ? b.h / b.ab : 0;
+    return avgB - avgA || b.h - a.h || b.rbi - a.rbi;
+  }));
   return byOwner;
 }
 
@@ -311,7 +315,7 @@ function viewPlayers() {
   const batTable = (rows) => `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
       <thead><tr><th class="l">球員</th><th>G</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>R</th><th>BB</th><th>SO</th><th>AVG</th></tr></thead>
       <tbody>${rows.map(p => `<tr>
-        <td class="l name">${esc(p.name)}</td>
+        <td class="l name">${esc(p.name)}<span class="team-tag">${esc(p.team)}</span></td>
         <td class="num">${p.g}</td><td class="num">${p.ab}</td><td class="num">${p.h}</td>
         <td class="num">${p.hr}</td><td class="num">${p.rbi}</td><td class="num">${p.r}</td>
         <td class="num">${p.bb}</td><td class="num">${p.so}</td><td class="num">${avg(p.h, p.ab)}</td></tr>`).join('')}
