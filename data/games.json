@@ -191,5 +191,68 @@
         "errors": ["Corey Seager"]
       }
     }
+    ,
+    {
+      "id": "2026-06-24-01",
+      "date": "2026-06-24",
+      "winner": "Scott",
+      "playerOfGame": { "name": "Garrett Crochet", "team": "Red Sox" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Red Sox",
+          "teamFull": "Boston Red Sox",
+          "homeAway": "away",
+          "runs": 2,
+          "hits": 6,
+          "errors": 0,
+          "innings": ["0","0","1","0","0","0","0","0","1"],
+          "batting": [
+            { "name": "Roman Anthony", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Trevor Story", "pos": "SS", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 1, "so": 3 },
+            { "name": "Jarren Duran", "pos": "DH", "ab": 4, "r": 0, "h": 1, "rbi": 1, "bb": 0, "so": 1 },
+            { "name": "Willson Contreras", "pos": "1B", "ab": 4, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Wilyer Abreu", "pos": "RF", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Caleb Durbin", "pos": "3B", "ab": 4, "r": 0, "h": 1, "rbi": 1, "bb": 0, "so": 3 },
+            { "name": "Ceddanne Rafaela", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Marcelo Mayer", "pos": "2B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Carlos Narváez", "pos": "C", "ab": 2, "r": 1, "h": 1, "rbi": 0, "bb": 1, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Garrett Crochet", "decision": "W", "record": "18-5", "ip": "8.0", "h": 2, "r": 0, "er": 0, "bb": 0, "so": 13 },
+            { "name": "Garrett Whitlock", "decision": "SV", "record": "1", "ip": "1.0", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 2 }
+          ]
+        },
+        {
+          "player": "Alvin",
+          "team": "Padres",
+          "teamFull": "San Diego Padres",
+          "homeAway": "home",
+          "runs": 0,
+          "hits": 2,
+          "errors": 0,
+          "innings": ["0","0","0","0","0","0","0","0","0"],
+          "batting": [
+            { "name": "Fernando Tatis Jr.", "pos": "RF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Jackson Merrill", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Manny Machado", "pos": "3B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Ramón Laureano", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Ty France", "pos": "1B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Xander Bogaerts", "pos": "SS", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Jake Cronenworth", "pos": "2B", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Miguel Andujar", "pos": "DH", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Freddy Fermin", "pos": "C", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 }
+          ],
+          "pitching": [
+            { "name": "Nick Pivetta", "decision": "L", "record": "13-5", "ip": "6.0", "h": 3, "r": 1, "er": 1, "bb": 3, "so": 11 },
+            { "name": "Adrian Morejon", "decision": "", "record": "", "ip": "3.0", "h": 3, "r": 1, "er": 1, "bb": 0, "so": 6 }
+          ]
+        }
+      ],
+      "notes": {
+        "2b": ["Wilyer Abreu"],
+        "sb": [{ "name": "Willson Contreras", "count": 1 }]
+      }
+    }
   ]
 }
