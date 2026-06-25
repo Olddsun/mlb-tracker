@@ -318,6 +318,70 @@
         "sb": [{ "name": "Jakob Marsee", "count": 1 }],
         "errors": ["Will Smith"]
       }
+    },
+    {
+      "id": "2026-06-25-01",
+      "date": "2026-06-25",
+      "winner": "Alvin",
+      "playerOfGame": { "name": "Chris Sale", "team": "Braves" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Rays",
+          "teamFull": "Tampa Bay Rays",
+          "homeAway": "away",
+          "runs": 1,
+          "hits": 6,
+          "errors": 0,
+          "innings": ["0","0","0","0","0","0","0","0","1"],
+          "batting": [
+            { "name": "Yandy Díaz", "pos": "DH", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Jonathan Aranda", "pos": "1B", "ab": 4, "r": 1, "h": 1, "rbi": 1, "bb": 0, "so": 3, "hr": 1 },
+            { "name": "Junior Caminero", "pos": "3B", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Jonny DeLuca", "pos": "RF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 4 },
+            { "name": "Cedric Mullins", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Ben Williamson", "pos": "2B", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Carson Williams", "pos": "SS", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Chandler Simpson", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Nick Fortes", "pos": "C", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 }
+          ],
+          "pitching": [
+            { "name": "Drew Rasmussen", "decision": "L", "record": "10-5", "ip": "5.0", "h": 5, "r": 2, "er": 2, "bb": 0, "so": 6 },
+            { "name": "Ian Seymour", "decision": "", "record": "", "ip": "3.0", "h": 2, "r": 0, "er": 0, "bb": 0, "so": 3 }
+          ]
+        },
+        {
+          "player": "Alvin",
+          "team": "Braves",
+          "teamFull": "Atlanta Braves",
+          "homeAway": "home",
+          "runs": 2,
+          "hits": 7,
+          "errors": 0,
+          "innings": ["1","0","0","0","1","0","0","0","X"],
+          "batting": [
+            { "name": "Ronald Acuña Jr.", "pos": "RF", "ab": 4, "r": 1, "h": 2, "rbi": 1, "bb": 0, "so": 1 },
+            { "name": "Drake Baldwin", "pos": "C", "ab": 4, "r": 0, "h": 1, "rbi": 1, "bb": 0, "so": 1 },
+            { "name": "Matt Olson", "pos": "1B", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Austin Riley", "pos": "3B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Mike Yastrzemski", "pos": "LF", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Ozzie Albies", "pos": "2B", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Michael Harris II", "pos": "CF", "ab": 3, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Dominic Smith", "pos": "DH", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Mauricio Dubón", "pos": "SS", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Chris Sale", "decision": "W", "record": "7-5", "ip": "7.1", "h": 4, "r": 0, "er": 0, "bb": 0, "so": 13 },
+            { "name": "Tyler Kinley", "decision": "HLD", "record": "14", "ip": "0.2", "h": 2, "r": 1, "er": 1, "bb": 0, "so": 0 },
+            { "name": "Raisel Iglesias", "decision": "SV", "record": "29", "ip": "1.0", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 3 }
+          ]
+        }
+      ],
+      "notes": {
+        "hr": ["Jonathan Aranda"],
+        "2b": ["Drake Baldwin", "Ozzie Albies", "Michael Harris II"],
+        "sb": [{ "name": "Ben Williamson", "count": 1 }]
+      }
     }
   ]
 }
