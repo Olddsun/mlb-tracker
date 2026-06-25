@@ -393,12 +393,8 @@ function viewPlayers() {
   const hasAny = PLAYERS.some(p => bat[p]?.length || pit[p]?.length);
   if (!hasAny) return `<div class="empty">還沒有球員資料。</div>`;
 
-  const playerLink = (name) => {
-    const url = mlbUrl(name);
-    return url
-      ? `<a class="player-link" href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`
-      : esc(name);
-  };
+  const playerLink = (name) =>
+    `<button class="player-link" onclick="showPlayer(${JSON.stringify(name)})">${esc(name)}</button>`;
 
   const batTable = (rows) => `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
       <thead><tr><th class="l">球員</th><th>G</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>R</th><th>BB</th><th>SO</th><th>AVG</th></tr></thead>
@@ -431,6 +427,73 @@ function viewPlayers() {
     ${PLAYERS.map(section).join('')}`;
 }
 function setPlayerTab(t) { playerTab = t; render(); }
+
+/* ---------- Player detail modal ---------- */
+function showPlayer(name) {
+  const bat = battingByOwner(), pit = pitchingByOwner();
+  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
+
+  const batRows = PLAYERS.map(p => ({ owner: p, d: bat[p]?.find(b => b.name === name) })).filter(x => x.d);
+  const pitRows = PLAYERS.map(p => ({ owner: p, d: pit[p]?.find(b => b.name === name) })).filter(x => x.d);
+  if (!batRows.length && !pitRows.length) return;
+
+  const team = batRows[0]?.d.team || pitRows[0]?.d.team || '';
+  const url  = mlbUrl(name);
+  const id   = MLB_IDS[name];
+  const photo = id ? `<img class="pm-photo" src="https://img.mlb.com/headshots/current/60x60/${id}@2x.jpg" onerror="this.style.display='none'" alt="" />` : '';
+
+  const ownerBlock = (owner, stats, fields) => `
+    <div class="pm-owner-block">
+      <div class="pm-owner-label"><span class="s-dot ${P_CLR[owner] || ''}"></span>${esc(owner)}</div>
+      <div class="pm-stats-grid">
+        ${fields.map(f => `<div class="pm-stat"><span class="pm-v">${f.v(stats)}</span><span class="pm-l">${f.l}</span></div>`).join('')}
+      </div>
+    </div>`;
+
+  const batFields = [
+    { l:'G',   v: d => d.g },
+    { l:'AB',  v: d => d.ab },
+    { l:'H',   v: d => d.h },
+    { l:'HR',  v: d => d.hr || 0 },
+    { l:'RBI', v: d => d.rbi },
+    { l:'AVG', v: d => avg(d.h, d.ab) },
+  ];
+  const pitFields = [
+    { l:'G',   v: d => d.g },
+    { l:'IP',  v: d => outsToIp(d.outs) },
+    { l:'W',   v: d => d.w },
+    { l:'L',   v: d => d.l },
+    { l:'SO',  v: d => d.so },
+    { l:'ERA', v: d => era(d.er, d.outs) },
+  ];
+
+  let html = `
+    <div class="pm-handle"></div>
+    <div class="pm-header">
+      ${photo}
+      <div>
+        <div class="pm-name">${esc(name)}</div>
+        <div class="pm-team">${esc(team)}</div>
+      </div>
+    </div>`;
+
+  if (batRows.length) {
+    html += `<div class="pm-section-title">打擊數據</div>`;
+    html += batRows.map(({ owner, d }) => ownerBlock(owner, d, batFields)).join('');
+  }
+  if (pitRows.length) {
+    html += `<div class="pm-section-title">投球數據</div>`;
+    html += pitRows.map(({ owner, d }) => ownerBlock(owner, d, pitFields)).join('');
+  }
+  if (url) html += `<a class="pm-mlb-btn" href="${url}" target="_blank" rel="noopener">查看 MLB 官網 →</a>`;
+
+  document.getElementById('pm-sheet').innerHTML = html;
+  document.getElementById('pm-modal').classList.add('open');
+}
+
+function closePlayer() {
+  document.getElementById('pm-modal').classList.remove('open');
+}
 
 /* ---------- router ---------- */
 function render() {
