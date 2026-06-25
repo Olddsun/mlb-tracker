@@ -444,6 +444,73 @@
         "2b": ["Matt Chapman"],
         "sb": [{ "name": "Matt Chapman", "count": 1 }, { "name": "Jung Hoo Lee", "count": 2 }, { "name": "Justin Crawford", "count": 1 }]
       }
+    },
+    {
+      "id": "2026-06-25-03",
+      "date": "2026-06-25",
+      "winner": "Vincent",
+      "playerOfGame": { "name": "Daniel Palencia", "team": "Cubs" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Guardians",
+          "teamFull": "Cleveland Guardians",
+          "homeAway": "away",
+          "runs": 2,
+          "hits": 5,
+          "errors": 2,
+          "innings": ["0","0","2","0","0","0","0","0","0"],
+          "batting": [
+            { "name": "Steven Kwan", "pos": "CF", "ab": 3, "r": 1, "h": 1, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Angel Martinez", "pos": "LF", "ab": 4, "r": 1, "h": 2, "rbi": 2, "bb": 0, "so": 0, "hr": 1 },
+            { "name": "José Ramírez", "pos": "3B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "David Fry", "pos": "1B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Rhys Hoskins", "pos": "DH", "ab": 2, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Daniel Schneemann", "pos": "PR-DH", "ab": 1, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Chase DeLauter", "pos": "RF", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Gabriel Arias", "pos": "SS", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Bo Naylor", "pos": "C", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Brayan Rocchio", "pos": "2B", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 }
+          ],
+          "pitching": [
+            { "name": "Tanner Bibee", "decision": "", "record": "", "ip": "5.2", "h": 6, "r": 1, "er": 1, "bb": 3, "so": 5 },
+            { "name": "Erik Sabrowski", "decision": "L", "record": "0-1", "ip": "1.2", "h": 1, "r": 2, "er": 2, "bb": 1, "so": 4 },
+            { "name": "Shawn Armstrong", "decision": "", "record": "", "ip": "0.2", "h": 1, "r": 0, "er": 0, "bb": 0, "so": 0 }
+          ]
+        },
+        {
+          "player": "Vincent",
+          "team": "Cubs",
+          "teamFull": "Chicago Cubs",
+          "homeAway": "home",
+          "runs": 3,
+          "hits": 8,
+          "errors": 1,
+          "innings": ["0","0","0","0","1","0","2","0","X"],
+          "batting": [
+            { "name": "Michael Busch", "pos": "1B", "ab": 5, "r": 0, "h": 3, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Alex Bregman", "pos": "3B", "ab": 3, "r": 1, "h": 0, "rbi": 0, "bb": 1, "so": 0 },
+            { "name": "Ian Happ", "pos": "LF", "ab": 4, "r": 1, "h": 2, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Nico Hoerner", "pos": "2B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Pete Crow-Armstrong", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Carson Kelly", "pos": "C", "ab": 3, "r": 0, "h": 1, "rbi": 1, "bb": 1, "so": 1 },
+            { "name": "Moisés Ballesteros", "pos": "DH", "ab": 3, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Dansby Swanson", "pos": "SS", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 1, "so": 1 },
+            { "name": "Michael Conforto", "pos": "RF", "ab": 3, "r": 1, "h": 1, "rbi": 1, "bb": 1, "so": 0, "hr": 1 }
+          ],
+          "pitching": [
+            { "name": "Matthew Boyd", "decision": "", "record": "", "ip": "6.1", "h": 2, "r": 2, "er": 2, "bb": 1, "so": 7 },
+            { "name": "Phil Maton", "decision": "W", "record": "4-5", "ip": "1.1", "h": 3, "r": 0, "er": 0, "bb": 0, "so": 3 },
+            { "name": "Daniel Palencia", "decision": "SV", "record": "22", "ip": "1.1", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 1 }
+          ]
+        }
+      ],
+      "notes": {
+        "hr": ["Angel Martinez", "Michael Conforto"],
+        "2b": ["Chase DeLauter"],
+        "sb": [{ "name": "Alex Bregman", "count": 2 }, { "name": "Ian Happ", "count": 2 }, { "name": "Brayan Rocchio", "count": 1 }],
+        "errors": ["José Ramírez", "Bo Naylor", "Dansby Swanson"]
+      }
     }
   ]
 }
