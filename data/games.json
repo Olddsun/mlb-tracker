@@ -382,6 +382,68 @@
         "2b": ["Drake Baldwin", "Ozzie Albies", "Michael Harris II"],
         "sb": [{ "name": "Ben Williamson", "count": 1 }]
       }
+    },
+    {
+      "id": "2026-06-25-02",
+      "date": "2026-06-25",
+      "winner": "Scott",
+      "playerOfGame": { "name": "Matt Chapman", "team": "Giants" },
+      "sides": [
+        {
+          "player": "Scott",
+          "team": "Giants",
+          "teamFull": "San Francisco Giants",
+          "homeAway": "away",
+          "runs": 2,
+          "hits": 7,
+          "errors": 0,
+          "innings": ["0","0","0","0","0","0","0","0","2"],
+          "batting": [
+            { "name": "Luis Arraez", "pos": "2B", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Willy Adames", "pos": "SS", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 1, "so": 0 },
+            { "name": "Rafael Devers", "pos": "1B", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Matt Chapman", "pos": "3B", "ab": 4, "r": 1, "h": 2, "rbi": 0, "bb": 0, "so": 0 },
+            { "name": "Jung Hoo Lee", "pos": "RF", "ab": 4, "r": 1, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Harrison Bader", "pos": "CF", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 3 },
+            { "name": "Heliot Ramos", "pos": "LF", "ab": 3, "r": 0, "h": 0, "rbi": 1, "bb": 0, "so": 1 },
+            { "name": "Bryce Eldridge", "pos": "DH", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Patrick Bailey", "pos": "C", "ab": 3, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 }
+          ],
+          "pitching": [
+            { "name": "Logan Webb", "decision": "", "record": "", "ip": "7.0", "h": 6, "r": 1, "er": 1, "bb": 0, "so": 9 },
+            { "name": "Ryan Borucki", "decision": "W", "record": "1-3", "ip": "2.0", "h": 1, "r": 0, "er": 0, "bb": 0, "so": 4 }
+          ]
+        },
+        {
+          "player": "Alvin",
+          "team": "Phillies",
+          "teamFull": "Philadelphia Phillies",
+          "homeAway": "home",
+          "runs": 1,
+          "hits": 7,
+          "errors": 0,
+          "innings": ["0","0","1","0","0","0","0","0","0"],
+          "batting": [
+            { "name": "Trea Turner", "pos": "SS", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Kyle Schwarber", "pos": "DH", "ab": 4, "r": 0, "h": 1, "rbi": 1, "bb": 0, "so": 3 },
+            { "name": "Bryce Harper", "pos": "1B", "ab": 4, "r": 0, "h": 2, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Alec Bohm", "pos": "3B", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Brandon Marsh", "pos": "LF", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "Adolis García", "pos": "RF", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 1 },
+            { "name": "J.T. Realmuto", "pos": "C", "ab": 4, "r": 0, "h": 1, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Bryson Stott", "pos": "2B", "ab": 4, "r": 0, "h": 0, "rbi": 0, "bb": 0, "so": 2 },
+            { "name": "Justin Crawford", "pos": "CF", "ab": 2, "r": 1, "h": 0, "rbi": 0, "bb": 0, "so": 0 }
+          ],
+          "pitching": [
+            { "name": "Cristopher Sánchez", "decision": "L", "record": "13-5", "ip": "8.2", "h": 7, "r": 2, "er": 1, "bb": 1, "so": 10 },
+            { "name": "José Alvarado", "decision": "", "record": "", "ip": "0.1", "h": 0, "r": 0, "er": 0, "bb": 0, "so": 0 }
+          ]
+        }
+      ],
+      "notes": {
+        "2b": ["Matt Chapman"],
+        "sb": [{ "name": "Matt Chapman", "count": 1 }, { "name": "Jung Hoo Lee", "count": 2 }, { "name": "Justin Crawford", "count": 1 }]
+      }
     }
   ]
 }
