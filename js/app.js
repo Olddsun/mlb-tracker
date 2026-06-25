@@ -381,10 +381,13 @@ function viewPlayers() {
   const hasAny = PLAYERS.some(p => bat[p]?.length || pit[p]?.length);
   if (!hasAny) return `<div class="empty">還沒有球員資料。</div>`;
 
+  const brefUrl = (name) => `https://www.baseball-reference.com/search/search.fcgi?query=${encodeURIComponent(name)}`;
+  const playerLink = (name) => `<a class="player-link" href="${brefUrl(name)}" target="_blank" rel="noopener">${esc(name)}</a>`;
+
   const batTable = (rows) => `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
       <thead><tr><th class="l">球員</th><th>G</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>R</th><th>BB</th><th>SO</th><th>AVG</th></tr></thead>
       <tbody>${rows.map(p => `<tr>
-        <td class="l name">${esc(p.name)}<span class="team-tag">${esc(p.team)}</span></td>
+        <td class="l name">${playerLink(p.name)}<span class="team-tag">${esc(p.team)}</span></td>
         <td class="num">${p.g}</td><td class="num">${p.ab}</td><td class="num">${p.h}</td>
         <td class="num">${p.hr}</td><td class="num">${p.rbi}</td><td class="num">${p.r}</td>
         <td class="num">${p.bb}</td><td class="num">${p.so}</td><td class="num">${avg(p.h, p.ab)}</td></tr>`).join('')}
@@ -393,7 +396,7 @@ function viewPlayers() {
   const pitTable = (rows) => `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
       <thead><tr><th class="l">投手</th><th>G</th><th>IP</th><th>W</th><th>L</th><th>SO</th><th>BB</th><th>H</th><th>ER</th><th>ERA</th></tr></thead>
       <tbody>${rows.map(p => `<tr>
-        <td class="l name">${esc(p.name)}</td>
+        <td class="l name">${playerLink(p.name)}</td>
         <td class="num">${p.g}</td><td class="num">${outsToIp(p.outs)}</td><td class="num">${p.w}</td>
         <td class="num">${p.l}</td><td class="num">${p.so}</td><td class="num">${p.bb}</td>
         <td class="num">${p.h}</td><td class="num">${p.er}</td><td class="num">${era(p.er, p.outs)}</td></tr>`).join('')}
@@ -427,6 +430,20 @@ function render() {
   app().innerHTML = html;
   document.querySelectorAll('nav a[data-route]').forEach(a => a.classList.toggle('active', a.dataset.route === route));
   window.scrollTo(0, 0);
+}
+
+async function refreshApp() {
+  const btn = document.querySelector('.refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  try {
+    const res = await fetch('data/games.json?_=' + Date.now());
+    DATA = await res.json();
+    DATA.games.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id < b.id ? 1 : -1)));
+    render();
+  } catch (e) {
+    app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
+  }
+  if (btn) setTimeout(() => btn.classList.remove('spinning'), 500);
 }
 
 async function boot() {
