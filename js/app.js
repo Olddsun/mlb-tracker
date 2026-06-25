@@ -2,6 +2,18 @@
 
 const PLAYERS = ['Scott', 'Alvin', 'Vincent'];
 
+const MLB_IDS = {"Aaron Judge":592450,"Adolis García":666969,"Adrian Morejon":670970,"Agustín Ramírez":682663,"Alec Bohm":664761,"Alex Bregman":608324,"Alex Freeland":690976,"Andy Pages":681624,"Angel Martinez":682657,"Anthony Bender":669622,"Austin Riley":663586,"Austin Wells":669224,"Ben Williamson":810938,"Blake Treinen":595014,"Bo Naylor":666310,"Brad Keller":641745,"Brandon Marsh":669016,"Brandon Nimmo":607043,"Brayan Rocchio":677587,"Bryce Eldridge":805811,"Bryce Harper":547180,"Bryson Stott":681082,"Caleb Durbin":702332,"Carlos Narváez":665966,"Carson Kelly":608348,"Carson Williams":700246,"Ceddanne Rafaela":678882,"Cedric Mullins":656775,"Chandler Simpson":802415,"Chase DeLauter":800050,"Chris Martin":455119,"Chris Sale":519242,"Christopher Morel":666624,"Cody Bellinger":641355,"Colt Keith":690993,"Connor Norby":681393,"Corey Seager":608369,"Cristopher Sánchez":650911,"Daniel Palencia":694037,"Daniel Schneemann":682177,"Danny Jansen":643376,"Dansby Swanson":621020,"David Fry":681807,"Dillon Dingler":693307,"Dominic Smith":642086,"Drake Baldwin":686948,"Drew Rasmussen":656876,"Erik Sabrowski":681870,"Eury Pérez":691587,"Evan Carter":694497,"Fernando Tatis Jr.":665487,"Freddie Freeman":518692,"Freddy Fermin":666023,"Gabriel Arias":672356,"Garrett Crochet":676979,"Garrett Whitlock":676477,"Giancarlo Stanton":519317,"Gleyber Torres":650402,"Graham Pauley":688363,"Griffin Conine":665052,"Harrison Bader":664056,"Heliot Ramos":671218,"Ian Happ":664023,"Ian Seymour":693855,"J.T. Realmuto":592663,"Jackson Merrill":701538,"Jacob Latz":656641,"Jacob deGrom":594798,"Jake Burger":669394,"Jake Cronenworth":630105,"Jakob Marsee":805300,"Jalen Beeks":656222,"Jarren Duran":680776,"Javier Báez":595879,"Jazz Chisholm Jr.":665862,"Jeremiah Estrada":669093,"Joc Pederson":592626,"Jonathan Aranda":666018,"Jonny DeLuca":676356,"Josh Jung":673962,"Josh Smith":669701,"José Alvarado":621237,"José Caballero":676609,"José Ramírez":608070,"Jung Hoo Lee":808982,"Junior Caminero":691406,"Justin Crawford":702222,"Kerry Carpenter":681481,"Kevin McGonigle":805808,"Kyle Schwarber":656941,"Kyle Tucker":663656,"Logan Webb":657277,"Luis Arraez":650333,"Manny Machado":592518,"Marcelo Mayer":691785,"Matt Chapman":656305,"Matt Olson":621566,"Matthew Boyd":571510,"Mauricio Dubón":643289,"Max Fried":608331,"Max Muncy":571970,"Michael Busch":683737,"Michael Conforto":624424,"Michael Harris II":671739,"Miguel Andujar":609280,"Mike Yastrzemski":573262,"Moisés Ballesteros":694208,"Mookie Betts":605141,"Nick Fortes":663743,"Nick Pivetta":601713,"Nico Hoerner":663538,"Otto Lopez":672640,"Owen Caissie":683357,"Ozzie Albies":645277,"Parker Meadows":678009,"Patrick Bailey":672275,"Paul Goldschmidt":502671,"Pete Crow-Armstrong":691718,"Phil Maton":664208,"Rafael Devers":646240,"Raisel Iglesias":628452,"Ramón Laureano":657656,"Rhys Hoskins":656555,"Riley Greene":682985,"Roman Anthony":701350,"Ronald Acuña Jr.":660670,"Ryan Borucki":621366,"Ryan McMahon":641857,"Sam Haggerty":664059,"Shawn Armstrong":542888,"Shohei Ohtani":660271,"Spencer Torkelson":679529,"Steven Kwan":680757,"Tanner Bibee":676440,"Tarik Skubal":669373,"Teoscar Hernández":606192,"Trea Turner":607208,"Trent Grisham":663757,"Trevor Story":596115,"Ty France":664034,"Tyler Kinley":641755,"Will Smith":669257,"Willson Contreras":575929,"Willy Adames":642715,"Wilyer Abreu":677800,"Wyatt Langford":694671,"Xander Bogaerts":593428,"Xavier Edwards":669364,"Yandy Díaz":650490,"Yoshinobu Yamamoto":808967};
+
+function mlbUrl(name) {
+  const id = MLB_IDS[name];
+  if (!id) return null;
+  const slug = name.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/ /g, '-')
+    .replace(/[^a-z0-9.\-]/g, '');
+  return `https://www.mlb.com/player/${slug}-${id}`;
+}
+
 // 球隊代表色（在深色背景上看得清楚的版本）
 const TEAM_COLORS = {
   'Phillies': '#ef3340', 'Yankees': '#6b8fd4', 'Dodgers': '#3b6fd4',
@@ -381,8 +393,12 @@ function viewPlayers() {
   const hasAny = PLAYERS.some(p => bat[p]?.length || pit[p]?.length);
   if (!hasAny) return `<div class="empty">還沒有球員資料。</div>`;
 
-  const brefUrl = (name) => `https://www.baseball-reference.com/search/search.fcgi?query=${encodeURIComponent(name)}`;
-  const playerLink = (name) => `<a class="player-link" href="${brefUrl(name)}" target="_blank" rel="noopener">${esc(name)}</a>`;
+  const playerLink = (name) => {
+    const url = mlbUrl(name);
+    return url
+      ? `<a class="player-link" href="${url}" target="_blank" rel="noopener">${esc(name)}</a>`
+      : esc(name);
+  };
 
   const batTable = (rows) => `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
       <thead><tr><th class="l">球員</th><th>G</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th><th>R</th><th>BB</th><th>SO</th><th>AVG</th></tr></thead>
