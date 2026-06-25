@@ -115,35 +115,68 @@ function pitchingByOwner() {
 }
 
 /* ---------- views ---------- */
+function standingsCard() {
+  const { wins } = headToHead();
+  const losses = {};
+  PLAYERS.forEach(p => losses[p] = DATA.baseline?.losses?.[p] || 0);
+  DATA.games.forEach(g => PLAYERS.forEach(p => {
+    if (g.sides.some(s => s.player === p) && g.winner !== p) losses[p]++;
+  }));
+
+  const rows = PLAYERS.map(p => {
+    const w = wins[p], l = losses[p];
+    const pct = (w + l) > 0 ? w / (w + l) : null;
+    return { p, w, l, pct };
+  }).sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1) || b.w - a.w || a.l - b.l);
+
+  const leader = rows[0];
+  const gbStr = (r) => {
+    if (r.p === leader.p) return '-';
+    const d = ((leader.w - r.w) + (r.l - leader.l)) / 2;
+    return d <= 0 ? '-' : d % 1 === 0 ? String(d) : d.toFixed(1);
+  };
+
+  const streakStr = (p) => {
+    let count = 0, type = null;
+    for (const g of DATA.games) {
+      if (!g.sides.some(s => s.player === p)) continue;
+      const won = g.winner === p;
+      if (type === null) { type = won; count = 1; }
+      else if (won === type) count++;
+      else break;
+    }
+    return count > 0 ? (type ? 'W' : 'L') + count : '-';
+  };
+
+  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
+  const fmtPct = (v) => v == null ? '-' : v.toFixed(3).replace(/^0/, '');
+
+  return `<div class="card standings-card">
+    <table class="standings-tbl">
+      <thead><tr>
+        <th class="sl">玩家</th>
+        <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>STRK</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td class="sl"><div class="pl-row"><span class="s-dot ${P_CLR[r.p] || ''}"></span>${esc(r.p)}</div></td>
+          <td>${r.w}</td><td>${r.l}</td>
+          <td class="mono">${fmtPct(r.pct)}</td>
+          <td class="mono gb">${gbStr(r)}</td>
+          <td class="mono strk ${streakStr(r.p).startsWith('W') ? 'strk-w' : streakStr(r.p).startsWith('L') ? 'strk-l' : ''}">${streakStr(r.p)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
 function viewHome() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄，貼 box score 給 Claude 就會出現在這。</div>`;
-  const { wins, total } = headToHead();
-  const maxWins = Math.max(...PLAYERS.map(p => wins[p]));
-  const leaders = PLAYERS.filter(p => wins[p] === maxWins && wins[p] > 0);
-  const leader = leaders.length === 1 ? leaders[0] : null;
-  const wr = (p) => total ? Math.round(wins[p] / total * 100) : 0;
-
-  const playerBlock = (p) => `
-    <div class="h2h-player ${leader === p ? 'leader' : ''}">
-      <div class="name ${p.toLowerCase()}">${p}</div>
-      <div class="wins mono">${wins[p]}</div>
-      <div class="wr">勝率 ${wr(p)}%</div>
-    </div>`;
-
   return `
-    <div class="card h2h">
-      <div class="h2h-top">
-        ${PLAYERS.map(playerBlock).join('')}
-      </div>
-      <div class="h2h-sub">
-        ${leader ? `<b>${leader}</b> 系列領先` : '暫無領先'} · 共 ${total} 場
-      </div>
-    </div>
-
+    ${standingsCard()}
     ${compareCard()}
-
     <div class="section-title">近期對戰</div>
-    ${DATA.games.length ? DATA.games.slice(0, 4).map(gameCard).join('') : '<div class="empty" style="padding:24px">尚無逐場數據。</div>'}
+    ${DATA.games.slice(0, 4).map(gameCard).join('')}
   `;
 }
 
