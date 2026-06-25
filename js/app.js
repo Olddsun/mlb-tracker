@@ -117,11 +117,23 @@ function pitchingByOwner() {
 /* ---------- views ---------- */
 function standingsCard() {
   const { wins } = headToHead();
-  const losses = {};
-  PLAYERS.forEach(p => losses[p] = DATA.baseline?.losses?.[p] || 0);
-  DATA.games.forEach(g => PLAYERS.forEach(p => {
-    if (g.sides.some(s => s.player === p) && g.winner !== p) losses[p]++;
-  }));
+  const losses = {}, rs = {}, ra = {}, homeW = {}, homeL = {}, awayW = {}, awayL = {};
+  PLAYERS.forEach(p => {
+    losses[p] = DATA.baseline?.losses?.[p] || 0;
+    rs[p] = 0; ra[p] = 0; homeW[p] = 0; homeL[p] = 0; awayW[p] = 0; awayL[p] = 0;
+  });
+  DATA.games.forEach(g => {
+    g.sides.forEach(s => {
+      const p = s.player;
+      if (!(p in rs)) return;
+      if (g.winner !== p) losses[p]++;
+      rs[p] += s.runs;
+      ra[p] += g.sides.find(x => x.player !== p)?.runs || 0;
+      const won = g.winner === p;
+      if (s.homeAway === 'home') { won ? homeW[p]++ : homeL[p]++; }
+      else { won ? awayW[p]++ : awayL[p]++; }
+    });
+  });
 
   const rows = PLAYERS.map(p => {
     const w = wins[p], l = losses[p];
@@ -135,7 +147,6 @@ function standingsCard() {
     const d = ((leader.w - r.w) + (r.l - leader.l)) / 2;
     return d <= 0 ? '-' : d % 1 === 0 ? String(d) : d.toFixed(1);
   };
-
   const streakStr = (p) => {
     let count = 0, type = null;
     for (const g of DATA.games) {
@@ -150,23 +161,36 @@ function standingsCard() {
 
   const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
   const fmtPct = (v) => v == null ? '-' : v.toFixed(3).replace(/^0/, '');
+  const fmtDiff = (p) => { const d = rs[p] - ra[p]; return d > 0 ? `+${d}` : String(d); };
+  const diffCls = (p) => { const d = rs[p] - ra[p]; return d > 0 ? 'diff-pos' : d < 0 ? 'diff-neg' : ''; };
+  const recStr = (w, l) => (w + l) > 0 ? `${w}-${l}` : '-';
 
   return `<div class="card standings-card">
+    <div class="standings-scroll">
     <table class="standings-tbl">
       <thead><tr>
         <th class="sl">玩家</th>
         <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>STRK</th>
+        <th>RS</th><th>RA</th><th>DIFF</th><th>HOME</th><th>AWAY</th>
       </tr></thead>
       <tbody>
-        ${rows.map(r => `<tr>
+        ${rows.map(r => {
+          const strk = streakStr(r.p);
+          return `<tr>
           <td class="sl"><div class="pl-row"><span class="s-dot ${P_CLR[r.p] || ''}"></span>${esc(r.p)}</div></td>
           <td>${r.w}</td><td>${r.l}</td>
           <td class="mono">${fmtPct(r.pct)}</td>
           <td class="mono gb">${gbStr(r)}</td>
-          <td class="mono strk ${streakStr(r.p).startsWith('W') ? 'strk-w' : streakStr(r.p).startsWith('L') ? 'strk-l' : ''}">${streakStr(r.p)}</td>
-        </tr>`).join('')}
+          <td class="mono strk ${strk.startsWith('W') ? 'strk-w' : strk.startsWith('L') ? 'strk-l' : ''}">${strk}</td>
+          <td class="mono">${rs[r.p]}</td>
+          <td class="mono">${ra[r.p]}</td>
+          <td class="mono ${diffCls(r.p)}">${fmtDiff(r.p)}</td>
+          <td class="mono rec">${recStr(homeW[r.p], homeL[r.p])}</td>
+          <td class="mono rec">${recStr(awayW[r.p], awayL[r.p])}</td>
+        </tr>`;}).join('')}
       </tbody>
     </table>
+    </div>
   </div>`;
 }
 
