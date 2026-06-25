@@ -55,8 +55,10 @@ header.site {
 .refresh-btn svg { width: 19px; height: 19px; }
 .refresh-btn.spinning svg { animation: spin .5s linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.player-link { background: none; border: none; border-bottom: 1px dashed var(--border); color: inherit; font: inherit; padding: 0; cursor: pointer; touch-action: manipulation; }
+.player-link { border-bottom: 1px dashed var(--border); color: inherit; font: inherit; padding: 0; cursor: pointer; touch-action: manipulation; }
 .player-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.player-link.missing { cursor: default; border-bottom: none; }
+.player-link.missing:hover { color: inherit; }
 .brand { display: flex; align-items: center; gap: 9px; font-family: var(--condensed); font-weight: 700; font-size: 19px; letter-spacing: 1px; text-transform: uppercase; }
 .brand .brand-logo { width: 30px; height: 30px; border-radius: 8px; flex: none; display: block; }
 
