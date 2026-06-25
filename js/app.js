@@ -1,6 +1,6 @@
 /* ============ MLB The Show Tracker — app logic ============ */
 
-const PLAYERS = ['Scott', 'Alvin'];
+const PLAYERS = ['Scott', 'Alvin', 'Vincent'];
 
 // 球隊代表色（在深色背景上看得清楚的版本）
 const TEAM_COLORS = {
@@ -36,7 +36,8 @@ const fmtDate = (d) => { const [y, m, day] = d.split('-'); return `${y} / ${m} /
 /* ---------- aggregations ---------- */
 function headToHead() {
   const base = DATA.baseline?.wins || {};
-  const wins = { Scott: base.Scott || 0, Alvin: base.Alvin || 0 };
+  const wins = {};
+  PLAYERS.forEach(p => wins[p] = base[p] || 0);
   DATA.games.forEach(g => { if (wins[g.winner] != null) wins[g.winner]++; });
   const total = (DATA.baseline?.games || 0) + DATA.games.length;
   return { wins, total };
@@ -117,7 +118,9 @@ function pitchingByOwner() {
 function viewHome() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄，貼 box score 給 Claude 就會出現在這。</div>`;
   const { wins, total } = headToHead();
-  const leader = wins.Scott === wins.Alvin ? null : (wins.Scott > wins.Alvin ? 'Scott' : 'Alvin');
+  const maxWins = Math.max(...PLAYERS.map(p => wins[p]));
+  const leaders = PLAYERS.filter(p => wins[p] === maxWins && wins[p] > 0);
+  const leader = leaders.length === 1 ? leaders[0] : null;
   const wr = (p) => total ? Math.round(wins[p] / total * 100) : 0;
 
   const playerBlock = (p) => `
@@ -130,12 +133,10 @@ function viewHome() {
   return `
     <div class="card h2h">
       <div class="h2h-top">
-        ${playerBlock('Scott')}
-        <div class="h2h-vs">VS</div>
-        ${playerBlock('Alvin')}
+        ${PLAYERS.map(playerBlock).join('')}
       </div>
       <div class="h2h-sub">
-        ${leader ? `<b>${leader}</b> 系列領先` : '兩人平手'} · 共 ${total} 場
+        ${leader ? `<b>${leader}</b> 系列領先` : '暫無領先'} · 共 ${total} 場
       </div>
     </div>
 
@@ -150,42 +151,53 @@ function compareCard() {
   const t = playerTotals();
   const eraNum = (p) => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null;
   const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : 0;
+  const P_CLR = ['s', 'a', 'v'];
 
   const stats = [
-    { lab: '累積安打', s: t.Scott.h, a: t.Alvin.h },
-    { lab: '累積全壘打', s: t.Scott.hr, a: t.Alvin.hr },
-    { lab: '累積三振（投手）', s: t.Scott.so, a: t.Alvin.so },
-    { lab: '平均得分', s: avgRun('Scott'), a: avgRun('Alvin'), dp: 1 },
-    { lab: '團隊 ERA', s: eraNum('Scott'), a: eraNum('Alvin'), dp: 2, lowerBetter: true }
+    { lab: '累積安打', vals: PLAYERS.map(p => t[p].h) },
+    { lab: '累積全壘打', vals: PLAYERS.map(p => t[p].hr) },
+    { lab: '累積三振（投手）', vals: PLAYERS.map(p => t[p].so) },
+    { lab: '平均得分', vals: PLAYERS.map(p => avgRun(p)), dp: 1 },
+    { lab: '團隊 ERA', vals: PLAYERS.map(p => eraNum(p)), dp: 2, lowerBetter: true }
   ];
 
   const rows = stats.map(st => {
-    const sNum = st.s, aNum = st.a;
     const fmt = (v) => v == null ? '—' : (st.dp != null ? v.toFixed(st.dp) : v);
-    const sDisp = fmt(sNum), aDisp = fmt(aNum);
-    // 排名與長條（lowerBetter 時，數值低者領先、長條較長）
-    let lead = '', sw, aw;
-    if (sNum == null || aNum == null) { sw = aw = 1; }
-    else if (st.lowerBetter) {
-      lead = sNum < aNum ? 's' : aNum < sNum ? 'a' : '';
-      sw = aNum; aw = sNum; // 反向加權
-    } else {
-      lead = sNum > aNum ? 's' : aNum > sNum ? 'a' : '';
-      sw = sNum; aw = aNum;
+
+    // 找領先者（有效值中最佳，不並列才標色）
+    const valid = st.vals.map((v, i) => v != null ? { v, i } : null).filter(Boolean);
+    let leaderIdx = -1;
+    if (valid.length > 0) {
+      const best = st.lowerBetter
+        ? valid.reduce((b, c) => c.v < b.v ? c : b)
+        : valid.reduce((b, c) => c.v > b.v ? c : b);
+      if (valid.filter(x => x.v === best.v).length === 1) leaderIdx = best.i;
     }
-    const sPct = (sw + aw) > 0 ? sw / (sw + aw) * 100 : 50;
+
+    // 長條比例（lowerBetter 用倒數加權）
+    const barW = st.vals.map(v => v == null ? 0 : st.lowerBetter ? (v > 0 ? 1 / v : 0) : v);
+    const total = barW.reduce((s, v) => s + v, 0);
+    const pcts = total > 0 ? barW.map(v => v / total * 100) : barW.map(() => 100 / PLAYERS.length);
+
+    const cols = PLAYERS.map((p, i) => `
+      <div class="cmp-col${leaderIdx === i ? ' lead-' + P_CLR[i] : ''}">
+        <span class="v">${fmt(st.vals[i])}</span>
+        <span class="pname ${P_CLR[i]}">${p}</span>
+      </div>`).join('');
+
+    const segs = PLAYERS.map((p, i) =>
+      `<span class="seg-${P_CLR[i]}" style="width:${pcts[i].toFixed(1)}%"></span>`
+    ).join('');
+
     return `<div class="cmp-stat">
-        <div class="cmp-vals">
-          <span class="v ${lead === 's' ? 'lead-s' : ''}">${sDisp}</span>
-          <span class="lab">${st.lab}</span>
-          <span class="v r ${lead === 'a' ? 'lead-a' : ''}">${aDisp}</span>
-        </div>
-        <div class="cmp-bar"><span class="seg-s" style="width:${sPct}%"></span><span class="seg-a" style="width:${100 - sPct}%"></span></div>
+        <div class="cmp-lab">${st.lab}</div>
+        <div class="cmp-cols">${cols}</div>
+        <div class="cmp-bar">${segs}</div>
       </div>`;
   }).join('');
 
   return `<div class="card compare">
-      <div class="cmp-names"><span class="s">Scott</span><span class="mid">數據對比</span><span class="a">Alvin</span></div>
+      <div class="cmp-title">數據對比</div>
       ${rows}
     </div>`;
 }
