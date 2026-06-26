@@ -333,44 +333,20 @@ async function submitGame() {
   const rawUserInput = document.getElementById('mapping-input').value.trim()
 
   showStep('step-processing')
-  setMsg('建立上傳工作階段…')
+  setMsg('上傳截圖中…')
 
   try {
-    // 1. 建立 session
-    const sessionRes = await fetch('/api/create-upload-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ submittedBy: selectedPlayer, token, rawUserInput }),
-    })
-    const session = await sessionRes.json()
-    if (!sessionRes.ok) throw new Error(session.error || '建立 session 失敗')
+    const formData = new FormData()
+    formData.append('submittedBy', selectedPlayer)
+    formData.append('token', token)
+    formData.append('rawUserInput', rawUserInput)
+    images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
-    // 2. 上傳 5 張截圖
-    setMsg('上傳截圖中…')
-    for (let i = 0; i < 5; i++) {
-      const urlInfo = session.uploadUrls[i]
-      const uploadRes = await fetch(urlInfo.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: images[i],
-      })
-      if (!uploadRes.ok) throw new Error(`截圖 ${i + 1} 上傳失敗`)
-      setMsg(`上傳截圖中… (${i + 1}/5)`)
-    }
+    setMsg('AI 解析中，約需 15–20 秒…')
+    const res = await fetch('/api/submit-game', { method: 'POST', body: formData })
+    const result = await res.json()
 
-    // 3. AI 解析
-    setMsg('AI 解析中，約需 15 秒…')
-    const processRes = await fetch('/api/process-submission', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ submissionId: session.submissionId }),
-    })
-    const result = await processRes.json()
-
-    if (!processRes.ok || !result.success) {
-      throw new Error(result.error || '解析失敗')
-    }
-
+    if (!res.ok || !result.success) throw new Error(result.error || '提交失敗')
     showResult(result)
   } catch (err) {
     showError(err.message)
