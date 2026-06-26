@@ -1,6 +1,6 @@
 /* ============ E-Sport League — Service Worker ============ */
 /* 每次 push 有 UI/JS/CSS 改動時，請遞增 CACHE_VERSION */
-const CACHE_VERSION = 'esl-v15';
+const CACHE_VERSION = 'esl-v16';
 
 const STATIC = [
   './',
@@ -38,17 +38,9 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  /* games.json：network first，確保拿到最新比賽資料 */
-  if (url.pathname.endsWith('games.json')) {
-    event.respondWith(
-      fetch(request)
-        .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(request, clone));
-          return res;
-        })
-        .catch(() => caches.match(request))
-    );
+  /* API 請求：永遠走 network，不快取 */
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(request));
     return;
   }
 
