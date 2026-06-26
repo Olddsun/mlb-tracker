@@ -312,7 +312,7 @@ function viewGames() {
     <button class="chip${!gamesFilter ? ' active' : ''}" onclick="setGamesFilter(null)">全部</button>
     ${pairs.map(([a, b]) => {
       const active = gamesFilter && gamesFilter[0] === a && gamesFilter[1] === b;
-      return `<button class="chip${active ? ' active' : ''}" data-fa="${a}" data-fb="${b}" onclick="setGamesFilter([this.dataset.fa,this.dataset.fb])">${a} vs ${b}</button>`;
+      return `<button class="chip${active ? ' active' : ''}" onclick="setGamesFilter(['${a}','${b}'])">${a} vs ${b}</button>`;
     }).join('')}
   </div>`;
 
