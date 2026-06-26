@@ -74,23 +74,15 @@ export async function onRequest(context) {
     }
   }
 
-  // ── 4. 產生 signed read URLs 供 Claude 讀圖
+  // ── 4. 從 formData 取得圖片 buffer，直接轉 base64 給 Claude
   await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'parsing' })
 
-  const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}`, {
-    method: 'POST',
-    headers: { ...sbHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ expiresIn: 300, paths: imagePaths }),
-  })
-  const signedItems = await signRes.json()
-  const imageUrls = signedItems
-    .map(item => item.signedURL ? `${SUPABASE_URL}${item.signedURL}` : null)
-    .filter(Boolean)
-
-  if (imageUrls.length < 5) {
-    await failSub(SUPABASE_URL, sbHeaders, submissionId, '無法產生讀取 URL')
-    return json({ error: '截圖讀取失敗，請重試' }, 500)
-  }
+  const imageBase64s = await Promise.all(
+    imageFiles.map(async file => {
+      const buf = await file.arrayBuffer()
+      return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    })
+  )
 
   // ── 5. Claude Vision 解析
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -114,7 +106,10 @@ export async function onRequest(context) {
         role: 'user',
         content: [
           { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 5 張截圖（順序不固定）：` },
-          ...imageUrls.map(url => ({ type: 'image', source: { type: 'url', url } })),
+          ...imageBase64s.map(b64 => ({
+            type: 'image',
+            source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
+          })),
           { type: 'text', text: `回傳以下 JSON 格式：
 {
   "image_roles": [{"index":0,"role":"batting","team":"Yankees","confidence":"high"}],
@@ -141,8 +136,9 @@ export async function onRequest(context) {
   })
 
   if (!claudeRes.ok) {
-    await failSub(SUPABASE_URL, sbHeaders, submissionId, 'Claude API 錯誤')
-    return json({ error: 'AI 解析服務異常，請稍後重試' }, 500)
+    const errBody = await claudeRes.text()
+    await failSub(SUPABASE_URL, sbHeaders, submissionId, `Claude API 錯誤 ${claudeRes.status}: ${errBody}`)
+    return json({ error: `AI 解析失敗（${claudeRes.status}）：${errBody.slice(0, 120)}` }, 500)
   }
 
   const claudeData = await claudeRes.json()
