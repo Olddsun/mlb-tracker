@@ -34,6 +34,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: contain;
   padding-bottom: calc(64px + var(--safe-b));
+  min-height: 100dvh;
 }
 
 .mono { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
