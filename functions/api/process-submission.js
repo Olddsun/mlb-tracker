@@ -66,6 +66,7 @@ export async function onRequest(context) {
 3. 只解析截圖中實際存在的資訊，不推測、不補全
 4. 若某欄位不清楚，標記 needsReview: true 並列入 uncertainties
 5. 若某張截圖根本無法辨識為 box score，設定 fatalError: true
+6. 打擊成績截圖的表格「沒有」HR 欄位。HR 資料在截圖下方 BATTING 區塊，例：「HR: Jackson Chourio 2, Brice Turang」，代表 Chourio 打了 2 支、Turang 打了 1 支全壘打。必須從這裡讀取全壘打數量，填入 notes.hr（count 為該球員的全壘打數）。
 
 回傳純 JSON，不要任何說明文字。`,
       messages: [
@@ -103,7 +104,7 @@ export async function onRequest(context) {
     "away": []
   },
   "notes": {
-    "hr": ["Aaron Judge"],
+    "hr": [{"name": "Aaron Judge", "count": 1}],
     "sb": [{"name": "Trea Turner", "count": 2}],
     "errors": ["Brandon Marsh"]
   },
@@ -143,8 +144,11 @@ export async function onRequest(context) {
 
   // ── 6. 把 notes.hr 回填到 batting 行（截圖無 HR 欄位，AI 只能從 notes 拿）
   const hrMap = new Map()
-  for (const name of (parsed.notes?.hr ?? [])) {
-    hrMap.set(name, (hrMap.get(name) || 0) + 1)
+  for (const entry of (parsed.notes?.hr ?? [])) {
+    // 支援舊格式 string 和新格式 {name, count}
+    const name = typeof entry === 'string' ? entry : entry.name
+    const count = typeof entry === 'string' ? 1 : (entry.count ?? 1)
+    hrMap.set(name, (hrMap.get(name) || 0) + count)
   }
   for (const side of ['home', 'away']) {
     for (const b of (parsed.batting?.[side] ?? [])) {
@@ -329,7 +333,11 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
   // game_notes
   const notes = p.notes ?? {}
   const noteRows = [
-    ...(notes.hr ?? []).map(name => ({ game_id: gameId, note_type: 'hr', player_name: name, count: 1 })),
+    ...(notes.hr ?? []).map(entry => {
+      const name = typeof entry === 'string' ? entry : entry.name
+      const count = typeof entry === 'string' ? 1 : (entry.count ?? 1)
+      return { game_id: gameId, note_type: 'hr', player_name: name, count }
+    }),
     ...(notes.sb ?? []).map(sb => ({ game_id: gameId, note_type: 'sb', player_name: sb.name, count: sb.count ?? 1 })),
     ...(notes.errors ?? []).map(name => ({ game_id: gameId, note_type: 'error', player_name: name, count: 1 })),
   ]

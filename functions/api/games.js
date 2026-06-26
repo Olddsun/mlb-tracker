@@ -34,7 +34,7 @@ export async function onRequest(context) {
     // game_notes HR → player name 計數 map（AI 提交時 batting_lines.hr 為 0，從這裡補）
     const hrMap = new Map()
     for (const note of (game.game_notes || [])) {
-      if (note.note_type === 'hr') hrMap.set(note.player_name, (hrMap.get(note.player_name) || 0) + 1)
+      if (note.note_type === 'hr') hrMap.set(note.player_name, (hrMap.get(note.player_name) || 0) + (note.count || 1))
     }
 
     // sides：away 在前、home 在後（與原本 games.json 一致）
