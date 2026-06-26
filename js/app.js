@@ -288,10 +288,37 @@ function gameCard(g) {
     </div>`;
 }
 
+let gamesFilter = null; // null = 全部，或 ['Scott','Alvin'] 等
+
 function viewGames() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄。</div>`;
-  return `<div class="section-title">全部對戰（${DATA.games.length} 場）</div>${DATA.games.map(gameCard).join('')}`;
+
+  // 找出實際存在的對戰組合
+  const pairs = [
+    ['Scott','Alvin'], ['Scott','Vincent'], ['Alvin','Vincent']
+  ].filter(([a, b]) => DATA.games.some(g => {
+    const ps = g.sides.map(s => s.player);
+    return ps.includes(a) && ps.includes(b);
+  }));
+
+  const filtered = gamesFilter
+    ? DATA.games.filter(g => {
+        const ps = g.sides.map(s => s.player);
+        return ps.includes(gamesFilter[0]) && ps.includes(gamesFilter[1]);
+      })
+    : DATA.games;
+
+  const chips = `<div class="filter-chips">
+    <button class="chip${!gamesFilter ? ' active' : ''}" onclick="setGamesFilter(null)">全部</button>
+    ${pairs.map(([a, b]) => {
+      const active = gamesFilter && gamesFilter[0] === a && gamesFilter[1] === b;
+      return `<button class="chip${active ? ' active' : ''}" onclick="setGamesFilter(${JSON.stringify([a, b])})">${a} vs ${b}</button>`;
+    }).join('')}
+  </div>`;
+
+  return `${chips}<div class="section-title">對戰（${filtered.length} 場）</div>${filtered.map(gameCard).join('')}`;
 }
+function setGamesFilter(f) { gamesFilter = f; render(); }
 
 function viewGame(id) {
   const g = DATA.games.find(x => x.id === id);
@@ -365,26 +392,38 @@ function viewGame(id) {
   `;
 }
 
+const P_DOT_CLS = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
+const chevronSvg = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
 function viewTeams() {
   const byPlayer = teamRecordsByPlayer();
   const hasAny = PLAYERS.some(p => byPlayer[p]?.length);
   if (!hasAny) return `<div class="empty">還沒有隊伍資料，記錄比賽後就會出現。</div>`;
 
-  const section = (player) => {
+  const section = (player, idx) => {
     const recs = byPlayer[player] || [];
-    if (!recs.length) return `<div class="section-title">${esc(player)} 的隊伍</div><div class="empty" style="padding:24px">還沒有 ${esc(player)} 的比賽。</div>`;
-    return `<div class="section-title">${esc(player)} 的隊伍</div>
-      <div class="tbl-card"><div class="tbl-scroll"><table class="rank">
-        <thead><tr><th class="l">隊伍</th><th>場次</th><th>勝</th><th>敗</th><th>勝率</th><th>得分</th><th>失分</th></tr></thead>
-        <tbody>${recs.map(r => `<tr>
-          <td class="l name"><span class="tcolor" style="background:${teamColor(r.team)}"></span>${esc(r.team)}</td>
-          <td class="num">${r.gp}</td><td class="num">${r.w}</td><td class="num">${r.l}</td>
-          <td class="num">${(r.w / r.gp).toFixed(3).replace(/^0/, '')}</td>
-          <td class="num">${r.rs}</td><td class="num">${r.ra}</td></tr>`).join('')}
-        </tbody>
-      </table></div></div>`;
+    const dotCls = P_DOT_CLS[player] || '';
+    const content = recs.length
+      ? `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
+          <thead><tr><th class="l">隊伍</th><th>場次</th><th>勝</th><th>敗</th><th>勝率</th><th>得分</th><th>失分</th></tr></thead>
+          <tbody>${recs.map(r => `<tr>
+            <td class="l name"><span class="tcolor" style="background:${teamColor(r.team)}"></span>${esc(r.team)}</td>
+            <td class="num">${r.gp}</td><td class="num">${r.w}</td><td class="num">${r.l}</td>
+            <td class="num">${(r.w / r.gp).toFixed(3).replace(/^0/, '')}</td>
+            <td class="num">${r.rs}</td><td class="num">${r.ra}</td></tr>`).join('')}
+          </tbody>
+        </table></div></div>`
+      : `<div class="empty">還沒有 ${esc(player)} 的比賽。</div>`;
+
+    return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
+      <summary class="player-section-hd">
+        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+      </summary>
+      ${content}
+    </details>`;
   };
-  return PLAYERS.map(section).join('');
+
+  return PLAYERS.map((p, i) => section(p, i)).join('');
 }
 
 let playerTab = 'bat';
@@ -417,17 +456,26 @@ function viewPlayers() {
         <td class="num">${p.h}</td><td class="num">${p.er}</td><td class="num">${era(p.er, p.outs)}</td></tr>`).join('')}
       </tbody></table></div></div>`;
 
-  const section = (player) => {
+  const section = (player, idx) => {
     const rows = playerTab === 'bat' ? (bat[player] || []) : (pit[player] || []);
-    if (!rows.length) return `<div class="section-title">${esc(player)}</div><div class="empty" style="padding:24px">還沒有 ${esc(player)} 的${playerTab === 'bat' ? '打擊' : '投球'}資料。</div>`;
-    return `<div class="section-title">${esc(player)}</div>${playerTab === 'bat' ? batTable(rows) : pitTable(rows)}`;
+    const dotCls = P_DOT_CLS[player] || '';
+    const content = rows.length
+      ? (playerTab === 'bat' ? batTable(rows) : pitTable(rows))
+      : `<div class="empty">還沒有 ${esc(player)} 的${playerTab === 'bat' ? '打擊' : '投球'}資料。</div>`;
+
+    return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
+      <summary class="player-section-hd">
+        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+      </summary>
+      ${content}
+    </details>`;
   };
 
   return `<div class="toggle">
       <button class="${playerTab === 'bat' ? 'active' : ''}" onclick="setPlayerTab('bat')">打擊</button>
       <button class="${playerTab === 'pit' ? 'active' : ''}" onclick="setPlayerTab('pit')">投球</button>
     </div>
-    ${PLAYERS.map(section).join('')}`;
+    ${PLAYERS.map((p, i) => section(p, i)).join('')}`;
 }
 function setPlayerTab(t) { playerTab = t; render(); }
 

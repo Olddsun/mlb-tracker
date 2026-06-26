@@ -112,7 +112,7 @@ nav.tabs.top { display: none; }
 .section-title::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
-main { padding-top: 24px; }
+main.wrap { padding-top: 28px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 
 /* ---------- Head-to-head hero ---------- */
@@ -309,6 +309,35 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
 }
 .toggle button.active { background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(79,142,247,0.4); }
 .scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 2px 0; display: flex; align-items: center; gap: 5px; }
+
+/* ---------- 對戰篩選 chips ---------- */
+.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.chip {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 7px 16px;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+  touch-action: manipulation;
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.chip:active { opacity: .8; }
+
+/* ---------- 玩家折疊區塊 ---------- */
+.player-section { margin-bottom: 10px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.player-section-hd {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface-2); padding: 14px 18px;
+  cursor: pointer; user-select: none; list-style: none;
+  font-weight: 600; font-size: 15px;
+}
+.player-section-hd::-webkit-details-marker { display: none; }
+.player-section-hd .chevron {
+  margin-left: auto; width: 18px; height: 18px; color: var(--muted);
+  transition: transform .2s;
+}
+.player-section[open] > .player-section-hd .chevron { transform: rotate(180deg); }
+.player-section .tbl-card { border-radius: 0; border: none; border-top: 1px solid var(--border); }
+.player-section .empty { padding: 20px 18px; }
 
 /* ============ Desktop (≥ 720px) ============ */
 @media (min-width: 720px) {
