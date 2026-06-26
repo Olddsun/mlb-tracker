@@ -341,18 +341,19 @@ function viewGame(id) {
     </tr>`;
 
   const battingTable = (s) => {
-    const t = s.batting.reduce((a, b) => ({ ab: a.ab + b.ab, r: a.r + b.r, h: a.h + b.h, rbi: a.rbi + b.rbi, bb: a.bb + b.bb, so: a.so + b.so }), { ab: 0, r: 0, h: 0, rbi: 0, bb: 0, so: 0 });
+    const t = s.batting.reduce((a, b) => ({ ab: a.ab + b.ab, r: a.r + b.r, h: a.h + b.h, hr: a.hr + (b.hr || 0), rbi: a.rbi + b.rbi, bb: a.bb + b.bb, so: a.so + b.so }), { ab: 0, r: 0, h: 0, hr: 0, rbi: 0, bb: 0, so: 0 });
     return `<div class="box-team">
       <h3><span class="tcolor" style="background:${teamColor(s.team)}"></span>${esc(s.team)} 打擊</h3>
       <div class="tbl-scroll"><table class="stats">
-        <thead><tr><th class="l">球員</th><th class="n">AB</th><th class="n">R</th><th class="n">H</th><th class="n">RBI</th><th class="n">BB</th><th class="n">SO</th><th class="n">AVG</th></tr></thead>
+        <thead><tr><th class="l">球員</th><th class="n">AB</th><th class="n">R</th><th class="n">H</th><th class="n">HR</th><th class="n">RBI</th><th class="n">BB</th><th class="n">SO</th><th class="n">AVG</th></tr></thead>
         <tbody>
         ${s.batting.map(b => `<tr>
-          <td class="l player">${esc(b.name)}<span class="pos">${esc(b.pos || '')}</span>${b.hr ? `<span class="hr-tag">HR${b.hr > 1 ? '×' + b.hr : ''}</span>` : ''}</td>
+          <td class="l player">${esc(b.name)}<span class="pos">${esc(b.pos || '')}</span></td>
           <td class="n">${b.ab}</td><td class="n">${b.r}</td><td class="n ${b.h ? 'hl' : ''}">${b.h}</td>
+          <td class="n ${b.hr ? 'hl' : ''}">${b.hr || 0}</td>
           <td class="n">${b.rbi}</td><td class="n">${b.bb}</td><td class="n">${b.so}</td>
           <td class="n">${avg(b.h, b.ab)}</td></tr>`).join('')}
-        <tr class="totals"><td class="l">合計</td><td class="n">${t.ab}</td><td class="n">${t.r}</td><td class="n">${t.h}</td><td class="n">${t.rbi}</td><td class="n">${t.bb}</td><td class="n">${t.so}</td><td class="n"></td></tr>
+        <tr class="totals"><td class="l">合計</td><td class="n">${t.ab}</td><td class="n">${t.r}</td><td class="n">${t.h}</td><td class="n">${t.hr || ''}</td><td class="n">${t.rbi}</td><td class="n">${t.bb}</td><td class="n">${t.so}</td><td class="n"></td></tr>
         </tbody>
       </table></div>
     </div>`;
