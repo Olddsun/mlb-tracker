@@ -141,7 +141,18 @@ export async function onRequest(context) {
     return json({ error: `截圖無法辨識：${parsed.fatalErrorMessage || '請確認上傳正確的 box score'}` }, 422)
   }
 
-  // ── 6. 儲存解析結果到 submission
+  // ── 6. 把 notes.hr 回填到 batting 行（截圖無 HR 欄位，AI 只能從 notes 拿）
+  const hrMap = new Map()
+  for (const name of (parsed.notes?.hr ?? [])) {
+    hrMap.set(name, (hrMap.get(name) || 0) + 1)
+  }
+  for (const side of ['home', 'away']) {
+    for (const b of (parsed.batting?.[side] ?? [])) {
+      if (!b.hr && hrMap.has(b.name)) b.hr = hrMap.get(b.name)
+    }
+  }
+
+  // ── 7. 儲存解析結果到 submission
   await updateSubmission(SUPABASE_URL, sbHeaders, submissionId, {
     parsed_game_json: parsed,
     needs_review: parsed.needsReview ?? false,
@@ -152,17 +163,17 @@ export async function onRequest(context) {
     team_b: parsed.away_team,
   })
 
-  // ── 7. 硬性驗證
+  // ── 9. 硬性驗證
   const validationError = validateGame(parsed)
   if (validationError) {
     await failSubmission(SUPABASE_URL, sbHeaders, submissionId, validationError)
     return json({ error: validationError }, 422)
   }
 
-  // ── 8. 重複比賽偵測
+  // ── 10. 重複比賽偵測
   const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
 
-  // ── 9. 寫入正式 DB
+  // ── 11. 寫入正式 DB
   try {
     const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, sub.submitted_by)
 

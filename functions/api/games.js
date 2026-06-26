@@ -31,6 +31,12 @@ export async function onRequest(context) {
   const rows = await res.json()
 
   const games = rows.map(game => {
+    // game_notes HR → player name 計數 map（AI 提交時 batting_lines.hr 為 0，從這裡補）
+    const hrMap = new Map()
+    for (const note of (game.game_notes || [])) {
+      if (note.note_type === 'hr') hrMap.set(note.player_name, (hrMap.get(note.player_name) || 0) + 1)
+    }
+
     // sides：away 在前、home 在後（與原本 games.json 一致）
     const sides = [...game.game_sides]
       .sort((a, b) => (a.home_away === 'away' ? -1 : 1))
@@ -45,13 +51,16 @@ export async function onRequest(context) {
         innings:  side.innings,
         batting: [...side.batting_lines]
           .sort((a, b) => a.batting_order - b.batting_order)
-          .map(b => ({
-            name: b.name,
-            pos:  b.pos || '',
-            ab: b.ab, r: b.r, h: b.h,
-            rbi: b.rbi, bb: b.bb, so: b.so,
-            ...(b.hr > 0 ? { hr: b.hr } : {}),
-          })),
+          .map(b => {
+            const hr = b.hr > 0 ? b.hr : (hrMap.get(b.name) || 0)
+            return {
+              name: b.name,
+              pos:  b.pos || '',
+              ab: b.ab, r: b.r, h: b.h,
+              rbi: b.rbi, bb: b.bb, so: b.so,
+              ...(hr > 0 ? { hr } : {}),
+            }
+          }),
         pitching: [...side.pitching_lines]
           .sort((a, b) => a.pitching_order - b.pitching_order)
           .map(p => ({
