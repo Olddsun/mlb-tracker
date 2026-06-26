@@ -226,6 +226,27 @@ let selectedPlayer = ''
 let currentSlot = -1
 const images = [null, null, null, null, null]
 
+const PENDING_KEY = 'esl_pending_submission'
+
+function savePending(submissionId) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify({ submissionId, savedAt: Date.now() }))
+}
+
+function clearPending() {
+  localStorage.removeItem(PENDING_KEY)
+}
+
+// 頁面載入時，若有未完成的提交則自動繼續查詢
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(PENDING_KEY)
+  if (!saved) return
+  const { submissionId, savedAt } = JSON.parse(saved)
+  if (Date.now() - savedAt > 10 * 60 * 1000) { clearPending(); return }
+  showStep('step-processing')
+  setMsg('偵測到上次未完成的提交，繼續查詢中…')
+  pollResult(submissionId)
+})
+
 function selectPlayer(btn) {
   document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'))
   btn.classList.add('selected')
@@ -346,7 +367,8 @@ async function submitGame() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上傳失敗')
 
-    // 上傳完成，開始輪詢
+    // 上傳完成，存入 localStorage 並開始輪詢
+    savePending(data.submissionId)
     setMsg('AI 解析中，可以切換頁面，稍後回來查看結果…')
     await pollResult(data.submissionId)
   } catch (err) {
@@ -362,10 +384,12 @@ async function pollResult(submissionId) {
       const data = await res.json()
 
       if (data.status === 'committed') {
+        clearPending()
         showResult({ success: true, game: data.game, warnings: data.warnings })
         return
       }
       if (data.status === 'failed') {
+        clearPending()
         showError(data.error || 'AI 解析失敗，請重新上傳')
         return
       }
@@ -373,7 +397,7 @@ async function pollResult(submissionId) {
       setMsg(`AI 解析中… (${elapsed}s)　可以切換頁面，稍後回來查看`)
     } catch { /* 網路短暫中斷，繼續輪詢 */ }
   }
-  showError('處理超時（75 秒），請重新嘗試')
+  showTimeout(submissionId)
 }
 
 function setMsg(msg) {
@@ -422,6 +446,25 @@ function showError(msg) {
     <button class="btn btn-primary" onclick="showStep('step-upload')">重新上傳</button>
     <button class="btn btn-ghost" onclick="location.href='/'">返回主頁</button>
   `
+}
+
+function showTimeout(submissionId) {
+  showStep('step-result')
+  document.getElementById('step-result').innerHTML = `
+    <div class="result-icon">⏳</div>
+    <div class="result-title">查詢逾時</div>
+    <div class="error-box" style="color:var(--yellow);border-color:rgba(232,196,75,0.3);background:rgba(232,196,75,0.08)">
+      AI 可能還在處理中，或已完成。<br>請先查詢狀態，<strong>不要重新上傳</strong>，避免重複記錄。
+    </div>
+    <button class="btn btn-primary" onclick="resumePoll('${submissionId}')">繼續查詢狀態</button>
+    <button class="btn btn-ghost" onclick="location.href='/'">返回主頁</button>
+  `
+}
+
+async function resumePoll(submissionId) {
+  showStep('step-processing')
+  setMsg('繼續查詢中…')
+  await pollResult(submissionId)
 }
 </script>
 </body>
