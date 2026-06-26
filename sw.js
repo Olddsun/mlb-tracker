@@ -1,6 +1,6 @@
 /* ============ E-Sport League — Service Worker ============ */
 /* 每次 push 有 UI/JS/CSS 改動時，請遞增 CACHE_VERSION */
-const CACHE_VERSION = 'esl-v14';
+const CACHE_VERSION = 'esl-v15';
 
 const STATIC = [
   './',
@@ -11,6 +11,8 @@ const STATIC = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/apple-touch-icon.png',
+  './submit/',
+  './submit/index.html',
 ];
 
 /* 安裝：快取所有靜態資源，並立即接管（不等舊頁關閉） */
