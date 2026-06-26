@@ -240,30 +240,33 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
   const ph = { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
   const h = { ...headers, 'Content-Type': 'application/json' }
 
-  const [game] = await (await fetch(`${SUPABASE_URL}/rest/v1/games`, {
+  const gameRes = await fetch(`${SUPABASE_URL}/rest/v1/games`, {
     method: 'POST', headers: ph,
     body: JSON.stringify({
       played_at: new Date().toISOString().slice(0, 10),
       sport: 'mlb',
-      winner_player_id: p.winner,
+      winner_player_id: (p.winner || '').toLowerCase(),
       player_of_game_name: p.player_of_game?.name ?? null,
       player_of_game_team: p.player_of_game?.team ?? null,
-      submitted_by: submittedBy,
+      submitted_by: (submittedBy || '').toLowerCase(),
       submission_id: submissionId,
       source: 'ai_submission',
     }),
-  })).json()
-  if (!game?.id) throw new Error('games 寫入失敗')
+  })
+  if (!gameRes.ok) throw new Error(`games 寫入失敗：${await gameRes.text()}`)
+  const gameBody = await gameRes.json()
+  const game = Array.isArray(gameBody) ? gameBody[0] : gameBody
+  if (!game?.id) throw new Error('games 寫入失敗：無回傳 ID')
   const gameId = game.id
 
   for (const isHome of [true, false]) {
     const batting = isHome ? p.batting?.home : p.batting?.away
     const pitching = isHome ? p.pitching?.home : p.pitching?.away
-    const [side] = await (await fetch(`${SUPABASE_URL}/rest/v1/game_sides`, {
+    const sideRes = await fetch(`${SUPABASE_URL}/rest/v1/game_sides`, {
       method: 'POST', headers: ph,
       body: JSON.stringify({
         game_id: gameId,
-        player_id: isHome ? p.home_player : p.away_player,
+        player_id: (isHome ? p.home_player : p.away_player).toLowerCase(),
         team_name: isHome ? p.home_team : p.away_team,
         team_full: isHome ? p.home_team : p.away_team,
         home_away: isHome ? 'home' : 'away',
@@ -272,8 +275,11 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
         errors: 0,
         innings: isHome ? (p.innings?.home ?? []) : (p.innings?.away ?? []),
       }),
-    })).json()
-    if (!side?.id) throw new Error('game_sides 寫入失敗')
+    })
+    if (!sideRes.ok) throw new Error(`game_sides 寫入失敗：${await sideRes.text()}`)
+    const sideBody = await sideRes.json()
+    const side = Array.isArray(sideBody) ? sideBody[0] : sideBody
+    if (!side?.id) throw new Error('game_sides 寫入失敗：無回傳 ID')
 
     if (batting?.length) {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/batting_lines`, {
