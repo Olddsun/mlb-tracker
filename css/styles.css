@@ -87,6 +87,22 @@ nav.tabs.top { display: none; }
 }
 .bottom-tabs a:active { color: var(--text); }
 
+/* ---------- Submit FAB（手機版右下角） ---------- */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px) + 12px);
+  width: 52px; height: 52px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(79,142,247,0.45);
+  z-index: 99;
+  text-decoration: none;
+}
+.fab:active { opacity: 0.85; transform: scale(0.95); }
+
 /* ---------- Generic ---------- */
 .section-title { font-family: var(--condensed); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin: 24px 0 11px; font-weight: 600; }
 main { padding-top: 18px; }
@@ -290,6 +306,11 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
   nav.tabs.top a.active { color: #fff; background: var(--accent); }
 
   .bottom-tabs { display: none; }
+  .fab { display: none; }
+  nav.tabs.top a.submit-tab {
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  nav.tabs.top a.submit-tab:hover { background: #3d7de8; }
 
   .h2h { padding: 28px 24px; }
   .stat-row { gap: 12px; }
