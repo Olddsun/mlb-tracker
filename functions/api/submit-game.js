@@ -309,10 +309,15 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
   }
 
   const notes = p.notes ?? {}
+  const toArr = v => Array.isArray(v) ? v : (v ? [v] : [])
   const noteRows = [
-    ...(notes.hr ?? []).map(name => ({ game_id: gameId, note_type: 'hr', player_name: name, count: 1 })),
-    ...(notes.sb ?? []).map(sb => ({ game_id: gameId, note_type: 'sb', player_name: sb.name, count: sb.count ?? 1 })),
-    ...(notes.errors ?? []).map(name => ({ game_id: gameId, note_type: 'error', player_name: name, count: 1 })),
+    ...toArr(notes.hr).map(name => ({ game_id: gameId, note_type: 'hr', player_name: String(name), count: 1 })),
+    ...toArr(notes.sb).map(sb => ({
+      game_id: gameId, note_type: 'sb',
+      player_name: typeof sb === 'string' ? sb : sb.name,
+      count: typeof sb === 'string' ? 1 : (sb.count ?? 1),
+    })),
+    ...toArr(notes.errors).map(name => ({ game_id: gameId, note_type: 'error', player_name: String(name), count: 1 })),
   ]
   if (noteRows.length) {
     await fetch(`${SUPABASE_URL}/rest/v1/game_notes`, { method: 'POST', headers: h, body: JSON.stringify(noteRows) })
