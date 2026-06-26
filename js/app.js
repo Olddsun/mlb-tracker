@@ -518,9 +518,8 @@ async function refreshApp() {
   const btn = document.querySelector('.refresh-btn');
   if (btn) btn.classList.add('spinning');
   try {
-    const res = await fetch('data/games.json?_=' + Date.now());
+    const res = await fetch('/api/games');
     DATA = await res.json();
-    DATA.games.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id < b.id ? 1 : -1)));
     render();
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
@@ -530,9 +529,8 @@ async function refreshApp() {
 
 async function boot() {
   try {
-    const res = await fetch('data/games.json?_=' + Date.now());
+    const res = await fetch('/api/games');
     DATA = await res.json();
-    DATA.games.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (a.id < b.id ? 1 : -1)));
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
     return;
