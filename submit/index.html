@@ -342,15 +342,38 @@ async function submitGame() {
     formData.append('rawUserInput', rawUserInput)
     images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
-    setMsg('AI 解析中，約需 15–20 秒…')
     const res = await fetch('/api/submit-game', { method: 'POST', body: formData })
-    const result = await res.json()
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || '上傳失敗')
 
-    if (!res.ok || !result.success) throw new Error(result.error || '提交失敗')
-    showResult(result)
+    // 上傳完成，開始輪詢
+    setMsg('AI 解析中，可以切換頁面，稍後回來查看結果…')
+    await pollResult(data.submissionId)
   } catch (err) {
     showError(err.message)
   }
+}
+
+async function pollResult(submissionId) {
+  for (let i = 0; i < 25; i++) {
+    await new Promise(r => setTimeout(r, 3000))
+    try {
+      const res = await fetch(`/api/submission-status?id=${submissionId}`)
+      const data = await res.json()
+
+      if (data.status === 'committed') {
+        showResult({ success: true, game: data.game, warnings: data.warnings })
+        return
+      }
+      if (data.status === 'failed') {
+        showError(data.error || 'AI 解析失敗，請重新上傳')
+        return
+      }
+      const elapsed = (i + 1) * 3
+      setMsg(`AI 解析中… (${elapsed}s)　可以切換頁面，稍後回來查看`)
+    } catch { /* 網路短暫中斷，繼續輪詢 */ }
+  }
+  showError('處理超時（75 秒），請重新嘗試')
 }
 
 function setMsg(msg) {
