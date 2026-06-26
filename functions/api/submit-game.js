@@ -80,7 +80,7 @@ export async function onRequest(context) {
   const imageBase64s = await Promise.all(
     imageFiles.map(async file => {
       const buf = await file.arrayBuffer()
-      return btoa(String.fromCharCode(...new Uint8Array(buf)))
+      return bufToBase64(buf)
     })
   )
 
@@ -322,6 +322,17 @@ const updateSub = (url, h, id, data) =>
 
 const failSub = (url, h, id, msg) =>
   updateSub(url, h, id, { status: 'failed', error_message: msg })
+
+// 分塊轉 base64，避免大檔案 call stack 溢位
+function bufToBase64(buf) {
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  const chunkSize = 8192
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
+}
 
 const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 
