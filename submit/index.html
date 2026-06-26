@@ -188,16 +188,21 @@
     <div class="step-title">上傳 5 張截圖</div>
     <div class="step-desc">順序不限，AI 會自動判斷</div>
 
-    <div class="img-grid" id="img-grid">
-      <div class="img-slot" onclick="triggerFileInput(0)" id="slot-0"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerFileInput(1)" id="slot-1"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerFileInput(2)" id="slot-2"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerFileInput(3)" id="slot-3"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerFileInput(4)" id="slot-4"><span class="plus">+</span></div>
-    </div>
-    <p class="img-hint">點擊槽位選取截圖</p>
+    <button class="btn btn-ghost" onclick="triggerMultiSelect()" style="margin-top:0;margin-bottom:14px;">
+      選擇全部截圖（最多 5 張）
+    </button>
 
-    <input type="file" id="file-input" accept="image/*">
+    <div class="img-grid" id="img-grid">
+      <div class="img-slot" onclick="triggerSingleSelect(0)" id="slot-0"><span class="plus">+</span></div>
+      <div class="img-slot" onclick="triggerSingleSelect(1)" id="slot-1"><span class="plus">+</span></div>
+      <div class="img-slot" onclick="triggerSingleSelect(2)" id="slot-2"><span class="plus">+</span></div>
+      <div class="img-slot" onclick="triggerSingleSelect(3)" id="slot-3"><span class="plus">+</span></div>
+      <div class="img-slot" onclick="triggerSingleSelect(4)" id="slot-4"><span class="plus">+</span></div>
+    </div>
+    <p class="img-hint">或點擊單一槽位替換特定截圖</p>
+
+    <input type="file" id="file-input-multi" accept="image/*" multiple>
+    <input type="file" id="file-input-single" accept="image/*">
 
     <button class="btn btn-primary" id="submit-btn" onclick="submitGame()" disabled>
       送出分析
@@ -225,7 +230,6 @@ function selectPlayer(btn) {
   document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'))
   btn.classList.add('selected')
   selectedPlayer = btn.dataset.player
-  // 自動填入 token
   const tokenInput = document.getElementById('token-input')
   if (!tokenInput.value) tokenInput.value = selectedPlayer
 }
@@ -249,29 +253,47 @@ function goToStep3() {
   showStep('step-upload')
 }
 
-function triggerFileInput(index) {
-  currentSlot = index
-  const input = document.getElementById('file-input')
+// 多選（一次選最多 5 張）
+function triggerMultiSelect() {
+  const input = document.getElementById('file-input-multi')
   input.value = ''
   input.click()
 }
 
-document.getElementById('file-input').addEventListener('change', async (e) => {
-  const file = e.target.files[0]
-  if (!file || currentSlot < 0) return
+// 單選（替換特定槽位）
+function triggerSingleSelect(index) {
+  currentSlot = index
+  const input = document.getElementById('file-input-single')
+  input.value = ''
+  input.click()
+}
 
-  const compressed = await compressImage(file)
-  images[currentSlot] = compressed
-
-  const slot = document.getElementById(`slot-${currentSlot}`)
-  const url = URL.createObjectURL(compressed)
-  slot.innerHTML = `
-    <img src="${url}">
-    <div class="rm" onclick="removeImage(event, ${currentSlot})">✕</div>
-  `
-  slot.classList.add('filled')
+document.getElementById('file-input-multi').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files).slice(0, 5)
+  for (let i = 0; i < files.length; i++) {
+    const compressed = await compressImage(files[i])
+    images[i] = compressed
+    setSlot(i, compressed)
+  }
   updateSubmitBtn()
 })
+
+document.getElementById('file-input-single').addEventListener('change', async (e) => {
+  const file = e.target.files[0]
+  if (!file || currentSlot < 0) return
+  const compressed = await compressImage(file)
+  images[currentSlot] = compressed
+  setSlot(currentSlot, compressed)
+  updateSubmitBtn()
+})
+
+function setSlot(index, blob) {
+  const slot = document.getElementById(`slot-${index}`)
+  const url = URL.createObjectURL(blob)
+  slot.innerHTML = `<img src="${url}"><div class="rm" onclick="removeImage(event,${index})">✕</div>`
+  slot.classList.add('filled')
+  slot.onclick = () => triggerSingleSelect(index)
+}
 
 function removeImage(e, index) {
   e.stopPropagation()
