@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_PATH = path.join(__dirname, '..', 'data', 'games.json');
 const VALID_HOME_AWAY = new Set(['home', 'away']);
 const VALID_DECISIONS = new Set(['', 'W', 'L', 'SV', 'HLD', 'BS']);
