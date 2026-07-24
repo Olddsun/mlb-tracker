@@ -2,3 +2,8 @@
 inbox/
 *.log
 assets/logo_options/
+
+# 本機金鑰，絕不 commit
+.env.local
+scripts/.env.local
+.dev.vars
