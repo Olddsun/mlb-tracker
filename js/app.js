@@ -220,68 +220,185 @@ function recentGamesOf(player, n = RECENT_N) {
   return out;
 }
 
-// 某玩家近 n 場的彙總
+// 某玩家近 n 場的彙總（打擊與投手數據分開累計）
 function recentAgg(player, n = RECENT_N) {
   const gs = recentGamesOf(player, n);
-  const a = { games: gs.length, hr: 0, ab: 0, h: 0, so: 0, er: 0, outs: 0, runs: 0, hrPerGame: [], wl: [] };
+  const a = { games: gs.length, hr: 0, ab: 0, h: 0, rbi: 0, bb: 0, batSo: 0,
+              pso: 0, er: 0, outs: 0, ph: 0, pbb: 0, runs: 0, hrPerGame: [], wl: [] };
   gs.forEach(g => {
     const s = sideOf(g, player);
     let ghr = 0;
-    s.batting.forEach(b => { a.ab += b.ab || 0; a.h += b.h || 0; ghr += b.hr || 0; });
+    s.batting.forEach(b => { a.ab += b.ab || 0; a.h += b.h || 0; a.rbi += b.rbi || 0; a.bb += b.bb || 0; a.batSo += b.so || 0; ghr += b.hr || 0; });
     a.hr += ghr; a.hrPerGame.push(ghr);
-    s.pitching.forEach(p => { a.so += p.so || 0; a.er += p.er || 0; a.outs += ipToOuts(p.ip); });
+    s.pitching.forEach(p => { a.pso += p.so || 0; a.er += p.er || 0; a.outs += ipToOuts(p.ip); a.ph += p.h || 0; a.pbb += p.bb || 0; });
     a.runs += s.runs;
     a.wl.push(g.winner === player ? 'w' : 'l');   // 新到舊
   });
   a.avg = a.ab > 0 ? a.h / a.ab : 0;
+  a.kRate = a.ab > 0 ? a.batSo / a.ab : 0;
   a.era = a.outs > 0 ? a.er * 27 / a.outs : null;
-  a.soPerGame = a.games ? a.so / a.games : 0;
+  a.whip = a.outs > 0 ? (a.ph + a.pbb) / (a.outs / 3) : null;
+  a.soPerGame = a.games ? a.pso / a.games : 0;
+  a.bbPerGame = a.games ? a.pbb / a.games : 0;
   return a;
 }
 
-// 為單一玩家挑一句最突出的評語
-function insightFor(player, aggs) {
-  const a = aggs[player];
-  if (a.games === 0) return { html: '近期無出賽', neutral: true };
-  const others = PLAYERS.map(p => aggs[p]);
-  const maxHr = Math.max(...others.map(x => x.hr));
-  const maxSoPG = Math.max(...others.map(x => x.soPerGame));
-  const minEra = Math.min(...others.map(x => x.era ?? Infinity));
-  const cands = [];
+// ---- 進階資料（戰報規則庫用） ----
+// 生涯累積：勝場、全壘打、投手三振、救援、中繼、單場 MVP 次數
+function careerStats() {
+  const c = {};
+  PLAYERS.forEach(p => c[p] = { wins: 0, games: 0, hr: 0, pso: 0, sv: 0, hld: 0, mvp: 0 });
+  DATA.games.forEach(g => {
+    if (c[g.winner]) c[g.winner].wins++;
+    if (g.playerOfGame) {
+      const owner = g.sides.find(s => s.team === g.playerOfGame.team)?.player;   // MVP 歸屬於該隊持有者
+      if (owner && c[owner]) c[owner].mvp++;
+    }
+    g.sides.forEach(s => {
+      const x = c[s.player]; if (!x) return; x.games++;
+      s.batting.forEach(b => x.hr += b.hr || 0);
+      s.pitching.forEach(p => { x.pso += p.so || 0; if (p.decision === 'SV') x.sv++; if (p.decision === 'HLD') x.hld++; });
+    });
+  });
+  return c;
+}
 
-  // 長打火力
-  let hrStreak = 0;
-  for (const v of a.hrPerGame) { if (v >= 1) hrStreak++; else break; }
-  if (hrStreak >= 2) cands.push({ html: `近 ${hrStreak} 場場場開轟，長打火力全開 🔥`, score: 92 + hrStreak });
-  else if (a.hr >= 3 && a.hr === maxHr) cands.push({ html: `近 ${a.games} 場敲 ${a.hr} 發全壘打，全場最兇`, score: 76 });
+// 各玩家對每位對手的勝敗 + 目前連勝/連敗（新到舊取領先段）
+function h2hAll() {
+  const res = {};
+  PLAYERS.forEach(p => { res[p] = {}; });
+  PLAYERS.forEach(p => PLAYERS.forEach(o => {
+    if (p === o) return;
+    let w = 0, l = 0, streak = 0, type = null, done = false;
+    for (const g of DATA.games) {
+      if (!g.sides.some(s => s.player === p) || !g.sides.some(s => s.player === o)) continue;
+      const r = g.winner === p ? 'w' : 'l';
+      if (r === 'w') w++; else l++;
+      if (!done) {
+        if (type === null) { type = r; streak = 1; }
+        else if (r === type) streak++;
+        else done = true;
+      }
+    }
+    res[p][o] = { w, l, streak, type };
+  }));
+  return res;
+}
 
-  // 投手表現
-  if (a.games >= 2 && a.soPerGame === maxSoPG && a.soPerGame >= 5)
-    cands.push({ html: `場均 ${a.soPerGame.toFixed(1)} 次三振，投球火燙`, score: 70 });
-  else if (a.games >= 2 && a.era != null && a.era < 3 && a.era === minEra)
-    cands.push({ html: `防禦率 ${a.era.toFixed(2)}，牛棚穩如泰山`, score: 68 });
+// 某玩家某場的戲劇性事件（用逐局得分推算）
+function playerGameEvent(g, player) {
+  const s = sideOf(g, player);
+  const opp = g.sides.find(x => x !== s);
+  const val = (v) => (v === 'X' || v == null) ? 0 : (+v || 0);
+  const n = Math.max(s.innings.length, opp.innings.length);
+  let cum = 0, oppCum = 0, maxDef = 0;
+  for (let i = 0; i < n; i++) { cum += val(s.innings[i]); oppCum += val(opp.innings[i]); maxDef = Math.max(maxDef, oppCum - cum); }
+  return {
+    won: g.winner === player,
+    margin: s.runs - opp.runs,
+    shutout: opp.runs === 0 && s.runs > 0,
+    extra: s.innings.length > 9,
+    walkoff: g.winner === player && s.homeAway === 'home' && s.innings.length > 9,
+    comeback: g.winner === player && maxDef >= 3,
+    maxDef,
+    bigInning: Math.max(0, ...s.innings.map(val)),
+    multiHit: Math.max(0, ...s.batting.map(b => b.h || 0)),
+    multiHR: Math.max(0, ...s.batting.map(b => b.hr || 0)),
+    errors: s.errors,
+    blowup: Math.max(0, ...s.pitching.map(p => p.er || 0)),
+    opp: opp.player,
+  };
+}
 
-  // 打擊率（需足夠打數）
-  if (a.ab >= 8) {
-    const lowest = a.avg === Math.min(...others.map(x => x.ab >= 8 ? x.avg : Infinity));
-    const highest = a.avg === Math.max(...others.map(x => x.ab >= 8 ? x.avg : -1));
-    if (a.avg < 0.230 && lowest) cands.push({ html: `團隊打擊 ${fmtAvg(a.avg)}，該練打囉`, score: 66 });
-    else if (a.avg > 0.300 && highest) cands.push({ html: `團隊打擊 ${fmtAvg(a.avg)}，棒子發燙`, score: 64 });
+// 整體連勝/連敗（跨全部比賽，新到舊）
+function streakOf(player) {
+  let streak = 0, type = null;
+  for (const g of DATA.games) {
+    if (!g.sides.some(s => s.player === player)) continue;
+    const r = g.winner === player ? 'w' : 'l';
+    if (type === null) { type = r; streak = 1; }
+    else if (r === type) streak++;
+    else break;
   }
+  return { streak, type };
+}
 
-  // 連勝連敗
-  let stk = 1;
-  for (let i = 1; i < a.wl.length; i++) { if (a.wl[i] === a.wl[0]) stk++; else break; }
-  if (stk >= 2) cands.push(a.wl[0] === 'w'
-    ? { html: `${stk} 連勝，氣勢正旺`, score: 56 + stk }
-    : { html: `${stk} 連敗，需要止血`, score: 55 + stk });
+// 依勝率排名
+function rankMap() {
+  const wins = headToHead().wins;
+  const gp = {}; PLAYERS.forEach(p => gp[p] = 0);
+  DATA.games.forEach(g => g.sides.forEach(s => { if (gp[s.player] != null) gp[s.player]++; }));
+  const arr = PLAYERS.map(p => ({ p, pct: gp[p] ? wins[p] / gp[p] : 0 })).sort((a, b) => b.pct - a.pct);
+  const r = {}; arr.forEach((x, i) => r[x.p] = i + 1);
+  return r;
+}
+
+// 產生某玩家所有觸發的戰報候選，依突出分數排序（cat 供橫向反重複用）
+function insightCandidates(player, ctx) {
+  const { aggs, career, h2h, teamRec, rank } = ctx;
+  const a = aggs[player];
+  if (a.games === 0) return [{ cat: 'neutral', html: '近期無出賽', score: 0, neutral: true }];
+  const others = PLAYERS.map(p => aggs[p]);
+  const isMax = (val, sel) => val === Math.max(...others.map(sel));
+  const isMin = (val, sel) => val === Math.min(...others.map(sel));
+  const cands = [];
+  const push = (cat, html, score) => cands.push({ cat, html, score });
+  const lastG = recentGamesOf(player, 1)[0];
+  const ev = lastG ? playerGameEvent(lastG, player) : null;
+
+  /* A 打擊 */
+  let hrStreak = 0; for (const v of a.hrPerGame) { if (v >= 1) hrStreak++; else break; }
+  if (hrStreak >= 2) push('bat-hr', `近 ${hrStreak} 場場場開轟，長打火力全開 🔥`, 92 + hrStreak);
+  if (ev && ev.multiHR >= 2) push('bat-hr', `上場單場 ${ev.multiHR} 響炮，轟炸機`, 86);
+  if (ev && ev.multiHit >= 3) push('bat-hit', `上場敲出 ${ev.multiHit} 支安打，猛打賞`, 72);
+  if (a.rbi >= 6 && isMax(a.rbi, x => x.rbi)) push('bat-rbi', `近況 ${a.rbi} 分打點，清壘機器`, 70);
+  if (a.ab >= 8) {
+    if (a.avg < 0.230 && isMin(a.avg, x => x.ab >= 8 ? x.avg : Infinity)) push('bat-avg', `團隊打擊 ${fmtAvg(a.avg)}，該練打囉`, 66);
+    else if (a.avg > 0.300 && isMax(a.avg, x => x.ab >= 8 ? x.avg : -1)) push('bat-avg', `團隊打擊 ${fmtAvg(a.avg)}，棒子發燙`, 64);
+    if (a.kRate > 0.28 && isMax(a.kRate, x => x.ab >= 8 ? x.kRate : -1)) push('bat-k', `三振率 ${(a.kRate * 100).toFixed(0)}%，揮空有點多`, 58);
+  }
+  if (a.bb >= 4 && isMax(a.bb, x => x.bb)) push('bat-bb', `近況 ${a.bb} 次保送，選球一流`, 56);
+
+  /* B 投手 */
+  if (a.games >= 2 && a.soPerGame >= 6 && isMax(a.soPerGame, x => x.soPerGame)) push('pit-k', `場均 ${a.soPerGame.toFixed(1)} 次三振，投球火燙`, 71);
+  if (a.era != null && a.era < 3 && isMin(a.era, x => x.era ?? Infinity)) push('pit-era', `防禦率 ${a.era.toFixed(2)}，穩如泰山`, 69);
+  if (a.whip != null && a.whip < 1.05 && isMin(a.whip, x => x.whip ?? Infinity)) push('pit-whip', `被上壘率 ${a.whip.toFixed(2)}，難越雷池`, 63);
+  if (a.games >= 2 && a.bbPerGame < 1 && isMin(a.bbPerGame, x => x.bbPerGame ?? Infinity)) push('pit-bb', `場均不到 1 次四壞，控球精準`, 55);
+  if (ev && ev.blowup >= 5) push('pit-bad', `上場被打 ${ev.blowup} 分自責，投手丘惡夢`, 60);
+  if (career[player].sv >= 2) push('pit-sv', `累積 ${career[player].sv} 次關門成功`, 52);
+
+  /* C 戲劇性（最近一場） */
+  if (ev && ev.comeback) push('drama', `上場落後 ${ev.maxDef} 分後大逆轉，超狂`, 85);
+  if (ev && ev.walkoff) push('drama', `上場延長賽再見勝出`, 80);
+  else if (ev && ev.extra && ev.won) push('drama', `上場延長賽驚險帶走`, 74);
+  if (ev && ev.shutout) push('drama', `上場完封對手，送出鴨蛋`, 78);
+  if (ev && ev.won && ev.margin >= 7) push('drama', `上場海放對手 ${ev.margin} 分`, 72);
+  if (ev && ev.bigInning >= 5) push('drama', `上場單一局灌進 ${ev.bigInning} 分`, 62);
+  if (ev && ev.errors >= 3) push('drama-bad', `上場 ${ev.errors} 次失誤，手套漏風`, 59);
+
+  /* D/E/F 關係・選隊・里程碑 */
+  for (const o of PLAYERS) {
+    if (o === player) continue;
+    const rec = h2h[player][o];
+    if (rec && rec.type === 'w' && rec.streak >= 3) push('h2h', `是 ${o} 的苦主，對戰 ${rec.streak} 連勝`, 76);
+    else if (rec && rec.w >= 2 && rec.w === rec.l) push('h2h', `與 ${o} 交手 ${rec.w + rec.l} 場各半，難分高下`, 50);
+  }
+  (teamRec[player] || []).forEach(tr => {
+    if (tr.gp >= 2 && tr.w === tr.gp) push('team', `用 ${tr.team} ${tr.gp} 戰全勝，勝利方程式`, 67);
+    else if (tr.gp >= 2 && tr.w === 0) push('team', `用 ${tr.team} 老是輸，考慮換隊`, 57);
+  });
+  const st = streakOf(player);
+  if (st.streak >= 3) push('streak', st.type === 'w' ? `${st.streak} 連勝，氣勢正旺` : `${st.streak} 連敗，需要止血`, 54 + st.streak);
+  if (career[player].mvp >= 2) push('mvp', `已 ${career[player].mvp} 次獲選單場 MVP`, 48);
+  if (rank[player] === 1 && career[player].games >= 3) push('rank', `目前戰績龍頭，三人之首`, 46);
+  if (career[player].hr >= 20) push('milestone', `生涯累積轟破 ${Math.floor(career[player].hr / 10) * 10} 發`, 44);
 
   if (!cands.length) {
     const w = a.wl.filter(x => x === 'w').length;
-    return { html: `近 ${a.games} 場 ${w} 勝 ${a.games - w} 敗，打擊 ${fmtAvg(a.avg)}`, neutral: true };
+    return [{ cat: 'neutral', html: `近 ${a.games} 場 ${w} 勝 ${a.games - w} 敗，打擊 ${fmtAvg(a.avg)}`, score: 0, neutral: true }];
   }
   cands.sort((x, y) => y.score - x.score);
-  return cands[0];
+  return cands;
 }
 
 // 賽程建議：挑目前場次最少的一對；平手時「距上次最久」優先
@@ -308,9 +425,23 @@ function scheduleSuggestion() {
 function reportCard() {
   const aggs = {};
   PLAYERS.forEach(p => aggs[p] = recentAgg(p));
+  const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
+
+  // 每人算出所有候選，再做橫向反重複挑選（避免三人同一次都講同類）
+  const candsBy = {};
+  PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
+  const picked = {};
+  const fam = c => (c.cat || '').split('-')[0];   // 大類：bat/pit/drama/h2h/team/streak…
+  const usedFam = new Set();
+  [...PLAYERS].sort((p1, p2) => (candsBy[p2][0]?.score || 0) - (candsBy[p1][0]?.score || 0)).forEach(p => {
+    const list = candsBy[p];
+    const choice = list.find(c => !usedFam.has(fam(c))) || list[0];
+    picked[p] = choice;
+    if (choice && !choice.neutral) usedFam.add(fam(choice));
+  });
 
   const insights = PLAYERS.map(p => {
-    const ins = insightFor(p, aggs);
+    const ins = picked[p];
     return `<div class="ri">
         <span class="dot ${lc(p)}"></span>
         <span class="txt"><span class="nm ${lc(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>

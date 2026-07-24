@@ -1,6 +1,6 @@
 /* ============ E-Sport League — Service Worker ============ */
 /* 每次 push 有 UI/JS/CSS 改動時，請遞增 CACHE_VERSION */
-const CACHE_VERSION = 'esl-v24';
+const CACHE_VERSION = 'esl-v25';
 
 const STATIC = [
   './',
