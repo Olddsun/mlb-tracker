@@ -360,11 +360,12 @@ function insightCandidates(player, ctx) {
   }
   if (a.bb >= 4 && isMax(a.bb, x => x.bb)) push('bat-bb', `近況 ${a.bb} 次保送，選球一流`, 56);
 
-  /* B 投手 */
-  if (a.games >= 2 && a.soPerGame >= 6 && isMax(a.soPerGame, x => x.soPerGame)) push('pit-k', `場均 ${a.soPerGame.toFixed(1)} 次三振，投球火燙`, 71);
+  /* B 投手（只跟「有實際投球」的人比，避免沒投球的人 0 值汙染排名） */
+  const pitched = x => x.outs > 0;
+  if (a.outs > 0 && a.soPerGame >= 6 && isMax(a.soPerGame, x => pitched(x) ? x.soPerGame : -Infinity)) push('pit-k', `場均 ${a.soPerGame.toFixed(1)} 次三振，投球火燙`, 71);
   if (a.era != null && a.era < 3 && isMin(a.era, x => x.era ?? Infinity)) push('pit-era', `防禦率 ${a.era.toFixed(2)}，穩如泰山`, 69);
   if (a.whip != null && a.whip < 1.05 && isMin(a.whip, x => x.whip ?? Infinity)) push('pit-whip', `被上壘率 ${a.whip.toFixed(2)}，難越雷池`, 63);
-  if (a.games >= 2 && a.bbPerGame < 1 && isMin(a.bbPerGame, x => x.bbPerGame ?? Infinity)) push('pit-bb', `場均不到 1 次四壞，控球精準`, 55);
+  if (a.outs > 0 && a.bbPerGame < 1 && isMin(a.bbPerGame, x => pitched(x) ? x.bbPerGame : Infinity)) push('pit-bb', `場均不到 1 次四壞，控球精準`, 55);
   if (ev && ev.blowup >= 5) push('pit-bad', `上場被打 ${ev.blowup} 分自責，投手丘惡夢`, 60);
   if (career[player].sv >= 2) push('pit-sv', `累積 ${career[player].sv} 次關門成功`, 52);
 
@@ -408,8 +409,9 @@ function scheduleSuggestion() {
   for (let i = 0; i < PLAYERS.length; i++)
     for (let j = i + 1; j < PLAYERS.length; j++) pairs.push([PLAYERS[i], PLAYERS[j]]);
   const key = (x, y) => [x, y].sort().join('|');
+  const NEVER = DATA.games.length + 1;   // 未打過的哨兵值（比任何真實 index 大，且有限，避免 Infinity-Infinity=NaN）
   const count = {}, lastIdx = {};
-  pairs.forEach(([x, y]) => { count[key(x, y)] = 0; lastIdx[key(x, y)] = Infinity; });
+  pairs.forEach(([x, y]) => { count[key(x, y)] = 0; lastIdx[key(x, y)] = NEVER; });
   DATA.games.forEach((g, idx) => {
     if (g.sides.length !== 2) return;
     const k = key(g.sides[0].player, g.sides[1].player);
@@ -712,11 +714,11 @@ function confirmDeleteGame(id) {
         body: JSON.stringify({ id }),
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || '刪除失敗'); }
-      DATA.games = DATA.games.filter(x => x.id !== id);   // 先本地移除，畫面即時反映
       close();
-      location.hash = '#/';
+      DATA.games = DATA.games.filter(x => x.id !== id);         // 先本地移除
       try { const r = await fetch('/api/games'); DATA = await r.json(); } catch { /* 用本地資料即可 */ }
-      render();
+      if (location.hash === '#/' || location.hash === '') render();   // 已在首頁：直接重繪
+      else location.hash = '#/';                                 // 否則導回首頁（觸發一次 render）
     } catch (err) {
       btn.disabled = false; btn.textContent = '刪除';
       alert('刪除失敗：' + err.message);

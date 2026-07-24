@@ -73,7 +73,7 @@ export async function onRequest(context) {
       }))
 
     return {
-      id:     game.legacy_id || game.id,
+      id:     game.id,          // 一律用真正的 UUID（原本對匯入資料回傳 legacy_id，導致刪除失敗）
       date:   game.played_at,
       winner: capitalize(game.winner_player_id),
       playerOfGame: game.player_of_game_name

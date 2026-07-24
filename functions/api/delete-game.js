@@ -23,13 +23,18 @@ export async function onRequestPost(context) {
   }
 
   // 2. 刪 games（cascade 掉 game_sides / batting_lines / pitching_lines / game_notes）
+  //    用 return=representation 才能知道實際刪了幾筆，避免「刪 0 筆卻回成功」
   const del = await fetch(`${SUPABASE_URL}/rest/v1/games?id=eq.${id}`, {
     method: 'DELETE',
-    headers: { ...headers, 'Prefer': 'return=minimal' },
+    headers: { ...headers, 'Prefer': 'return=representation' },
   })
   if (!del.ok) {
     const t = await del.text()
     return json({ error: `刪除失敗：${t.slice(0, 160)}` }, 500)
+  }
+  const rows = await del.json().catch(() => [])
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return json({ error: '找不到這場比賽（可能已被刪除）' }, 404)
   }
 
   return json({ ok: true })

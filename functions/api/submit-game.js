@@ -75,7 +75,7 @@ async function parsePhase(context) {
   await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'uploaded' })
 
   // ── 同步解析後存起來、回傳給前端審核（尚未寫入正式資料，等使用者按確認）
-  const result = await processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy.toLowerCase())
+  const result = await processGame(env, submissionId, imageBuffers, rawUserInput)
   if (!result.ok) return json({ status: 'failed', error: result.error })
   return json({ status: 'parsed', submissionId, game: result.game, duplicates: result.duplicates, needsReview: result.needsReview })
 }
@@ -104,6 +104,14 @@ async function commitPhase(context) {
   const parsed = sub.parsed_game_json
   if (!parsed) return json({ error: '沒有可記錄的資料，請重新上傳' }, 400)
 
+  // 防重複寫入：若這筆 submission 已經寫過 game（快速連點/兩個分頁），直接回既有結果
+  const existRes = await fetch(`${SUPABASE_URL}/rest/v1/games?submission_id=eq.${submissionId}&select=id`, { headers: sbHeaders })
+  const existing = await existRes.json()
+  if (Array.isArray(existing) && existing.length) {
+    await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'committed', game_id: existing[0].id })
+    return json({ ok: true, game: toDisplayGame(parsed), warnings: buildWarnings(sub) })
+  }
+
   try {
     const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, (sub.submitted_by || '').toLowerCase())
     await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'committed', game_id: gameId })
@@ -115,7 +123,7 @@ async function commitPhase(context) {
 
 // ── 背景處理：Claude Vision + 驗證 + 寫 DB ────────────────────
 
-async function processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy) {
+async function processGame(env, submissionId, imageBuffers, rawUserInput) {
   const SUPABASE_URL = env.SUPABASE_URL
   const KEY = env.SUPABASE_SERVICE_ROLE_KEY
   const sbHeaders = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
@@ -257,8 +265,13 @@ function reconcileInnings(p) {
 // ── 驗證 ──────────────────────────────────────────────────────
 
 function validateGame(p) {
-  if (p.winner === p.home_player && p.home_score <= p.away_score) return '勝負與比分不一致'
-  if (p.winner === p.away_player && p.away_score <= p.home_score) return '勝負與比分不一致'
+  const w = (p.winner || '').toLowerCase()
+  const hp = (p.home_player || '').toLowerCase()
+  const ap = (p.away_player || '').toLowerCase()
+  if (!w || (w !== hp && w !== ap)) return '無法判斷勝方（或勝方對應不到玩家），請重新上傳'
+  if (typeof p.home_score !== 'number' || typeof p.away_score !== 'number') return '讀不到比分，請重新上傳'
+  if (w === hp && p.home_score <= p.away_score) return '勝負與比分不一致'
+  if (w === ap && p.away_score <= p.home_score) return '勝負與比分不一致'
   const sum = arr => arr.reduce((s, v) => { const n = parseInt(v); return s + (isNaN(n) ? 0 : n) }, 0)
   if (p.innings?.home && sum(p.innings.home) !== p.home_score) return `主場逐局加總（${sum(p.innings.home)}）與總分（${p.home_score}）不符`
   if (p.innings?.away && sum(p.innings.away) !== p.away_score) return `客場逐局加總（${sum(p.innings.away)}）與總分（${p.away_score}）不符`
@@ -276,9 +289,11 @@ async function detectDuplicates(SUPABASE_URL, headers, p) {
       { headers }
     )
     const games = await res.json()
+    const home = (p.home_player || '').toLowerCase()
+    const away = (p.away_player || '').toLowerCase()
     return games.filter(g => {
-      const players = new Set((g.game_sides || []).map(s => s.player_id))
-      return players.has(p.home_player) && players.has(p.away_player)
+      const players = new Set((g.game_sides || []).map(s => (s.player_id || '').toLowerCase()))
+      return players.has(home) && players.has(away)
     }).map(g => g.id)
   } catch { return [] }
 }
