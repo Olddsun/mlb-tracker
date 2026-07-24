@@ -1,7 +1,14 @@
 export async function onRequest(context) {
-  const { env, request, waitUntil } = context
-
+  const { request } = context
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+  const ct = request.headers.get('content-type') || ''
+  // JSON = 使用者按「確認記錄」的第二階段；multipart = 上傳截圖解析的第一階段
+  return ct.includes('application/json') ? commitPhase(context) : parsePhase(context)
+}
+
+// ── 階段一：上傳截圖 → AI 解析 → 存起來等使用者確認（尚未寫入正式資料）
+async function parsePhase(context) {
+  const { env, request } = context
 
   const SUPABASE_URL = env.SUPABASE_URL
   const KEY = env.SUPABASE_SERVICE_ROLE_KEY
@@ -67,10 +74,43 @@ export async function onRequest(context) {
 
   await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'uploaded' })
 
-  // ── 同步等待解析完成再回傳（背景 waitUntil 在 Cloudflare 不保證跑完，會卡在 parsing）
-  await processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy.toLowerCase())
+  // ── 同步解析後存起來、回傳給前端審核（尚未寫入正式資料，等使用者按確認）
+  const result = await processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy.toLowerCase())
+  if (!result.ok) return json({ status: 'failed', error: result.error })
+  return json({ status: 'parsed', submissionId, game: result.game, duplicates: result.duplicates, needsReview: result.needsReview })
+}
 
-  return json({ submissionId, status: 'processing' })
+// ── 階段二：使用者確認後，把已解析的結果寫入正式資料 ────────────────
+async function commitPhase(context) {
+  const { env, request } = context
+  const SUPABASE_URL = env.SUPABASE_URL
+  const KEY = env.SUPABASE_SERVICE_ROLE_KEY
+  const sbHeaders = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
+
+  let body
+  try { body = await request.json() } catch { return json({ error: '格式錯誤' }, 400) }
+  const submissionId = body && body.submissionId
+  if (!submissionId) return json({ error: '缺少 submissionId' }, 400)
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/submissions?id=eq.${submissionId}&select=parsed_game_json,submitted_by,status,game_id,needs_review,duplicate_candidates`,
+    { headers: sbHeaders }
+  )
+  const [sub] = await res.json()
+  if (!sub) return json({ error: '找不到提交記錄' }, 404)
+  if (sub.status === 'committed' && sub.game_id) {   // 已記錄過（重複點確認）→ 直接回成功
+    return json({ ok: true, game: toDisplayGame(sub.parsed_game_json), warnings: buildWarnings(sub) })
+  }
+  const parsed = sub.parsed_game_json
+  if (!parsed) return json({ error: '沒有可記錄的資料，請重新上傳' }, 400)
+
+  try {
+    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, (sub.submitted_by || '').toLowerCase())
+    await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'committed', game_id: gameId })
+    return json({ ok: true, game: toDisplayGame(parsed), warnings: buildWarnings(sub) })
+  } catch (e) {
+    return json({ error: e.message }, 500)
+  }
 }
 
 // ── 背景處理：Claude Vision + 驗證 + 寫 DB ────────────────────
@@ -93,29 +133,25 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
     const validationError = validateGame(parsed)
     if (validationError) throw new Error(validationError)
 
+    const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
+
+    // 存起來、狀態回 'uploaded'（DB CHECK 沒有 'parsed'），等使用者按確認才寫入正式資料
     await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
       parsed_game_json: parsed,
       needs_review: parsed.needsReview ?? false,
       uncertainties: parsed.uncertainties ?? [],
+      duplicate_candidates: duplicates,
+      status: 'uploaded',
       player_a: parsed.home_player,
       team_a: parsed.home_team,
       player_b: parsed.away_player,
       team_b: parsed.away_team,
     })
 
-    // 重複偵測
-    const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
-
-    // 寫入正式 DB
-    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, submittedBy)
-
-    await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
-      status: 'committed',
-      game_id: gameId,
-      duplicate_candidates: duplicates,
-    })
+    return { ok: true, game: toDisplayGame(parsed), duplicates, needsReview: parsed.needsReview ?? false }
   } catch (e) {
     await failSub(SUPABASE_URL, sbHeaders, submissionId, e.message)
+    return { ok: false, error: e.message }
   }
 }
 
@@ -357,6 +393,29 @@ const updateSub = (url, h, id, data) =>
 
 const failSub = (url, h, id, msg) =>
   updateSub(url, h, id, { status: 'failed', error_message: msg })
+
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
+
+// 把解析後的 JSON 轉成前端審核/成功畫面用的形狀
+function toDisplayGame(p) {
+  if (!p) return null
+  return {
+    homePlayer: cap(p.home_player), awayPlayer: cap(p.away_player),
+    homeTeam: p.home_team, awayTeam: p.away_team,
+    homeScore: p.home_score, awayScore: p.away_score,
+    winner: cap(p.winner),
+    playerOfGame: p.player_of_game || null,
+    homeBatting: p.batting?.home ?? [], awayBatting: p.batting?.away ?? [],
+    homePitching: p.pitching?.home ?? [], awayPitching: p.pitching?.away ?? [],
+  }
+}
+
+function buildWarnings(sub) {
+  return [
+    ...(sub.needs_review ? ['AI 對部分數據不太確定，記錄後建議再核對一次'] : []),
+    ...(((sub.duplicate_candidates?.length) ?? 0) > 0 ? ['這場好像記過了（同一天、同兩位玩家已有紀錄）'] : []),
+  ]
+}
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
