@@ -86,33 +86,79 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
     // 轉 base64
     const imageBase64s = imageBuffers.map(buf => bufToBase64(buf))
 
-    // Claude Vision
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system: `你是 MLB The Show box score 解析器。給你 ${imageBuffers.length} 張截圖（順序不固定），請：
+    // 先用 Haiku（快、便宜）解析並過硬性驗證；沒過就換 Sonnet（準）重跑一次
+    const attempt = async (model) => {
+      const p = await parseWithModel(env, model, imageBase64s, rawUserInput, imageBuffers.length)
+      if (p.fatalError) throw new Error(p.fatalErrorMessage || '截圖無法辨識')
+      const v = validateGame(p)
+      if (v) throw new Error(v)
+      return p
+    }
+    let parsed, usedModel
+    try {
+      parsed = await attempt('claude-haiku-4-5')
+      usedModel = 'haiku'
+    } catch (haikuErr) {
+      // Haiku 看錯 / 格式錯 / 驗證不過 → 用 Sonnet 補救；再失敗才真的失敗（往上拋給 catch）
+      parsed = await attempt('claude-sonnet-4-6')
+      usedModel = 'sonnet'
+    }
+
+    await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
+      parsed_game_json: parsed,
+      needs_review: parsed.needsReview ?? false,
+      uncertainties: parsed.uncertainties ?? [],
+      player_a: parsed.home_player,
+      team_a: parsed.home_team,
+      player_b: parsed.away_player,
+      team_b: parsed.away_team,
+    })
+
+    // 重複偵測
+    const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
+
+    // 寫入正式 DB
+    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, submittedBy)
+
+    await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
+      status: 'committed',
+      game_id: gameId,
+      duplicate_candidates: duplicates,
+    })
+  } catch (e) {
+    await failSub(SUPABASE_URL, sbHeaders, submissionId, e.message)
+  }
+}
+
+// ── Claude Vision 解析（可指定模型）────────────────────────────
+
+async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount) {
+  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      system: `你是 MLB The Show box score 解析器。給你 ${imageCount} 張截圖（順序不固定），請：
 1. 判斷每張圖角色：line_score（總比分+逐局）、batting（打擊成績）、pitching（投手成績）
 2. 根據玩家隊伍對應，將數據正確歸屬給各玩家
 3. 只解析截圖中實際存在的資訊，不推測
 4. 若欄位不清楚，設 needsReview: true 並列入 uncertainties
 5. 若有截圖完全無法辨識，設 fatalError: true
 回傳純 JSON，不加任何說明文字。`,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 ${imageBuffers.length} 張截圖（順序不固定）：` },
-            ...imageBase64s.map(b64 => ({
-              type: 'image',
-              source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
-            })),
-            { type: 'text', text: `回傳以下 JSON 格式：
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 ${imageCount} 張截圖（順序不固定）：` },
+          ...imageBase64s.map(b64 => ({
+            type: 'image',
+            source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
+          })),
+          { type: 'text', text: `回傳以下 JSON 格式：
 {
   "image_roles": [{"index":0,"role":"batting","team":"Yankees","confidence":"high"}],
   "home_player": "scott",
@@ -132,55 +178,18 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
   "fatalError": false,
   "fatalErrorMessage": null
 }` },
-          ],
-        }],
-      }),
-    })
+        ],
+      }],
+    }),
+  })
 
-    if (!claudeRes.ok) {
-      const err = await claudeRes.text()
-      throw new Error(`Claude API ${claudeRes.status}: ${err.slice(0, 200)}`)
-    }
-
-    const claudeData = await claudeRes.json()
-    let parsed
-    try {
-      const raw = claudeData.content[0].text.replace(/```json\n?|\n?```/g, '').trim()
-      parsed = JSON.parse(raw)
-    } catch {
-      throw new Error('Claude 回傳格式錯誤')
-    }
-
-    if (parsed.fatalError) throw new Error(parsed.fatalErrorMessage || '截圖無法辨識')
-
-    await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
-      parsed_game_json: parsed,
-      needs_review: parsed.needsReview ?? false,
-      uncertainties: parsed.uncertainties ?? [],
-      player_a: parsed.home_player,
-      team_a: parsed.home_team,
-      player_b: parsed.away_player,
-      team_b: parsed.away_team,
-    })
-
-    // 硬性驗證
-    const validationError = validateGame(parsed)
-    if (validationError) throw new Error(validationError)
-
-    // 重複偵測
-    const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
-
-    // 寫入正式 DB
-    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, submittedBy)
-
-    await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
-      status: 'committed',
-      game_id: gameId,
-      duplicate_candidates: duplicates,
-    })
-  } catch (e) {
-    await failSub(SUPABASE_URL, sbHeaders, submissionId, e.message)
+  if (!claudeRes.ok) {
+    const err = await claudeRes.text()
+    throw new Error(`Claude API ${claudeRes.status}: ${err.slice(0, 200)}`)
   }
+  const claudeData = await claudeRes.json()
+  const raw = claudeData.content[0].text.replace(/```json\n?|\n?```/g, '').trim()
+  return JSON.parse(raw)   // 格式錯會 throw，交由上層決定是否換模型補救
 }
 
 // ── 驗證 ──────────────────────────────────────────────────────

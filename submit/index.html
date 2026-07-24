@@ -387,8 +387,8 @@ async function submitGame() {
 }
 
 async function pollResult(submissionId) {
-  for (let i = 0; i < 25; i++) {
-    await new Promise(r => setTimeout(r, 3000))
+  for (let i = 0; i < 50; i++) {
+    await new Promise(r => setTimeout(r, 1500))
     try {
       const res = await fetch(`/api/submission-status?id=${submissionId}`)
       const data = await res.json()
@@ -403,7 +403,7 @@ async function pollResult(submissionId) {
         showError(data.error || 'AI 解析失敗，請重新上傳')
         return
       }
-      const elapsed = (i + 1) * 3
+      const elapsed = Math.round((i + 1) * 1.5)
       setMsg(`AI 解析中… (${elapsed}s)　可以切換頁面，稍後回來查看`)
     } catch { /* 網路短暫中斷，繼續輪詢 */ }
   }
