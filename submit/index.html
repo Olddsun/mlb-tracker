@@ -68,25 +68,33 @@
   .player-btn.selected { border-color: var(--accent); background: rgba(79,142,247,0.12); color: var(--accent); }
 
   /* Images */
-  .img-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 8px; }
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-bottom: 8px; }
   .img-slot {
     aspect-ratio: 9/16; background: var(--surface); border: 2px dashed var(--border);
     border-radius: 8px; display: flex; align-items: center; justify-content: center;
     cursor: pointer; position: relative; overflow: hidden; transition: border-color 0.15s;
+    touch-action: manipulation;
   }
   .img-slot:active { border-color: var(--accent); }
   .img-slot.filled { border-style: solid; border-color: var(--accent); }
+  .img-slot.add { border-style: dashed; }
   .img-slot img { width: 100%; height: 100%; object-fit: cover; }
   .img-slot .plus {
-    font-size: 24px; color: var(--muted); pointer-events: none;
+    font-size: 26px; color: var(--muted); pointer-events: none; line-height: 1;
+  }
+  .img-slot .idx {
+    position: absolute; bottom: 3px; left: 4px; font-size: 11px; font-weight: 600;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); pointer-events: none; z-index: 1;
   }
   .img-slot .rm {
-    position: absolute; top: 3px; right: 3px;
-    width: 20px; height: 20px; background: rgba(0,0,0,0.7);
+    position: absolute; top: 4px; right: 4px;
+    width: 28px; height: 28px; background: rgba(0,0,0,0.72);
     border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 12px; color: #fff; z-index: 1;
+    font-size: 15px; color: #fff; z-index: 2; touch-action: manipulation;
   }
+  .img-slot .rm:active { background: var(--red); }
   .img-hint { font-size: 12px; color: var(--muted); text-align: center; }
+  .img-count { font-size: 13px; color: var(--accent); text-align: center; font-weight: 600; margin-bottom: 8px; }
   input[type=file] { display: none; }
 
   /* Button */
@@ -185,21 +193,16 @@
 
   <!-- Step 3: 上傳截圖 -->
   <div class="step" id="step-upload">
-    <div class="step-title">上傳 5 張截圖</div>
-    <div class="step-desc">順序不限，AI 會自動判斷</div>
+    <div class="step-title">上傳截圖</div>
+    <div class="step-desc">張數不限，順序也不用排，AI 會自動判斷</div>
 
     <button class="btn btn-ghost" onclick="triggerMultiSelect()" style="margin-top:0;margin-bottom:14px;">
-      選擇全部截圖（最多 5 張）
+      選擇截圖（可一次多選）
     </button>
 
-    <div class="img-grid" id="img-grid">
-      <div class="img-slot" onclick="triggerSingleSelect(0)" id="slot-0"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerSingleSelect(1)" id="slot-1"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerSingleSelect(2)" id="slot-2"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerSingleSelect(3)" id="slot-3"><span class="plus">+</span></div>
-      <div class="img-slot" onclick="triggerSingleSelect(4)" id="slot-4"><span class="plus">+</span></div>
-    </div>
-    <p class="img-hint">或點擊單一槽位替換特定截圖</p>
+    <div class="img-count" id="img-count"></div>
+    <div class="img-grid" id="img-grid"></div>
+    <p class="img-hint">點縮圖可替換該張，點 ✕ 移除，點最後的「＋」繼續追加</p>
 
     <input type="file" id="file-input-multi" accept="image/*" multiple>
     <input type="file" id="file-input-single" accept="image/*">
@@ -224,7 +227,7 @@
 <script>
 let selectedPlayer = ''
 let currentSlot = -1
-const images = [null, null, null, null, null]
+let images = []  // 動態張數，每個元素是壓縮後的 blob
 
 const PENDING_KEY = 'esl_pending_submission'
 
@@ -271,17 +274,19 @@ function goToStep2() {
 function goToStep3() {
   const mapping = document.getElementById('mapping-input').value.trim()
   if (!mapping) return alert('請輸入玩家隊伍對應')
+  renderGrid()
   showStep('step-upload')
 }
 
-// 多選（一次選最多 5 張）
+// 多選（一次可選任意張數，追加到現有清單）
 function triggerMultiSelect() {
+  currentSlot = -1
   const input = document.getElementById('file-input-multi')
   input.value = ''
   input.click()
 }
 
-// 單選（替換特定槽位）
+// 單選（點縮圖替換該張；index = -1 代表點結尾的「＋」追加一張）
 function triggerSingleSelect(index) {
   currentSlot = index
   const input = document.getElementById('file-input-single')
@@ -290,45 +295,50 @@ function triggerSingleSelect(index) {
 }
 
 document.getElementById('file-input-multi').addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files).slice(0, 5)
-  for (let i = 0; i < files.length; i++) {
-    const compressed = await compressImage(files[i])
-    images[i] = compressed
-    setSlot(i, compressed)
+  const files = Array.from(e.target.files)
+  for (const file of files) {
+    images.push(await compressImage(file))
   }
-  updateSubmitBtn()
+  renderGrid()
 })
 
 document.getElementById('file-input-single').addEventListener('change', async (e) => {
   const file = e.target.files[0]
-  if (!file || currentSlot < 0) return
+  if (!file) return
   const compressed = await compressImage(file)
-  images[currentSlot] = compressed
-  setSlot(currentSlot, compressed)
-  updateSubmitBtn()
+  if (currentSlot >= 0 && currentSlot < images.length) {
+    images[currentSlot] = compressed   // 替換特定張
+  } else {
+    images.push(compressed)            // 追加
+  }
+  renderGrid()
 })
 
-function setSlot(index, blob) {
-  const slot = document.getElementById(`slot-${index}`)
-  const url = URL.createObjectURL(blob)
-  slot.innerHTML = `<img src="${url}"><div class="rm" onclick="removeImage(event,${index})">✕</div>`
-  slot.classList.add('filled')
-  slot.onclick = () => triggerSingleSelect(index)
+// 依 images 陣列重畫縮圖 + 結尾「＋」追加槽
+function renderGrid() {
+  const grid = document.getElementById('img-grid')
+  const thumbs = images.map((blob, i) => {
+    const url = URL.createObjectURL(blob)
+    return `<div class="img-slot filled" onclick="triggerSingleSelect(${i})">
+      <img src="${url}" alt="截圖 ${i + 1}">
+      <span class="idx">${i + 1}</span>
+      <div class="rm" onclick="removeImage(event, ${i})" role="button" aria-label="移除截圖 ${i + 1}">✕</div>
+    </div>`
+  }).join('')
+  const addSlot = `<div class="img-slot add" onclick="triggerSingleSelect(-1)" role="button" aria-label="追加截圖"><span class="plus">＋</span></div>`
+  grid.innerHTML = thumbs + addSlot
+  document.getElementById('img-count').textContent = images.length ? `已選 ${images.length} 張` : ''
+  updateSubmitBtn()
 }
 
 function removeImage(e, index) {
   e.stopPropagation()
-  images[index] = null
-  const slot = document.getElementById(`slot-${index}`)
-  slot.innerHTML = '<span class="plus">+</span>'
-  slot.classList.remove('filled')
-  slot.onclick = () => triggerFileInput(index)
-  updateSubmitBtn()
+  images.splice(index, 1)
+  renderGrid()
 }
 
 function updateSubmitBtn() {
-  const btn = document.getElementById('submit-btn')
-  btn.disabled = images.some(img => img === null)
+  document.getElementById('submit-btn').disabled = images.length < 1
 }
 
 async function compressImage(file) {

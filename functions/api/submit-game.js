@@ -23,13 +23,14 @@ export async function onRequest(context) {
     return json({ error: 'Token 錯誤' }, 401)
   }
 
-  // ── 讀取圖片 buffer（在回應前讀完，背景才能用）
+  // ── 讀取圖片 buffer（張數不限，讀到沒有 image_i 為止；在回應前讀完，背景才能用）
   const imageBuffers = []
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; ; i++) {
     const file = formData.get(`image_${i}`)
-    if (!file) return json({ error: `缺少第 ${i + 1} 張截圖` }, 400)
+    if (!file) break
     imageBuffers.push(await file.arrayBuffer())
   }
+  if (imageBuffers.length === 0) return json({ error: '請至少上傳 1 張截圖' }, 400)
 
   // ── 建立 submission
   const submissionId = crypto.randomUUID()
@@ -48,7 +49,7 @@ export async function onRequest(context) {
   })
   if (!dbRes.ok) return json({ error: '建立記錄失敗，請稍後重試' }, 500)
 
-  // ── 並行上傳 5 張截圖
+  // ── 並行上傳所有截圖
   const uploadResults = await Promise.all(
     imageBuffers.map((buf, i) =>
       fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${imagePaths[i]}`, {
@@ -96,7 +97,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
-        system: `你是 MLB The Show box score 解析器。給你 5 張截圖（順序不固定），請：
+        system: `你是 MLB The Show box score 解析器。給你 ${imageBuffers.length} 張截圖（順序不固定），請：
 1. 判斷每張圖角色：line_score（總比分+逐局）、batting（打擊成績）、pitching（投手成績）
 2. 根據玩家隊伍對應，將數據正確歸屬給各玩家
 3. 只解析截圖中實際存在的資訊，不推測
@@ -106,7 +107,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
         messages: [{
           role: 'user',
           content: [
-            { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 5 張截圖（順序不固定）：` },
+            { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 ${imageBuffers.length} 張截圖（順序不固定）：` },
             ...imageBase64s.map(b64 => ({
               type: 'image',
               source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
