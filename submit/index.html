@@ -216,7 +216,7 @@
   <!-- Processing -->
   <div class="step" id="step-processing">
     <div class="spinner"></div>
-    <div class="processing-msg" id="processing-msg">上傳截圖中…</div>
+    <div class="processing-msg" id="processing-msg">AI 解析中，請稍候…</div>
   </div>
 
   <!-- Result -->
@@ -364,7 +364,7 @@ async function submitGame() {
   const rawUserInput = document.getElementById('mapping-input').value.trim()
 
   showStep('step-processing')
-  setMsg('上傳截圖中…')
+  setMsg('AI 解析中，約需 30 秒 ⏳　請留在此畫面、不要離開或關閉，否則會讀取失敗')
 
   try {
     const formData = new FormData()
@@ -373,13 +373,13 @@ async function submitGame() {
     formData.append('rawUserInput', rawUserInput)
     images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
+    // 後端會同步解析完再回應（約 30 秒），回來時已完成，查一次即可
     const res = await fetch('/api/submit-game', { method: 'POST', body: formData })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上傳失敗')
 
-    // 上傳完成，存入 localStorage 並開始輪詢
     savePending(data.submissionId)
-    setMsg('AI 解析中，可以切換頁面，稍後回來查看結果…')
+    setMsg('即將完成…')
     await pollResult(data.submissionId)
   } catch (err) {
     showError(err.message)
@@ -404,7 +404,7 @@ async function pollResult(submissionId) {
         return
       }
       const elapsed = Math.round((i + 1) * 1.5)
-      setMsg(`AI 解析中… (${elapsed}s)　可以切換頁面，稍後回來查看`)
+      setMsg(`AI 解析中… (${elapsed}s)　請留在此畫面`)
     } catch { /* 網路短暫中斷，繼續輪詢 */ }
   }
   showTimeout(submissionId)

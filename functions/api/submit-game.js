@@ -67,8 +67,8 @@ export async function onRequest(context) {
 
   await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'uploaded' })
 
-  // ── 立刻回傳，背景繼續處理
-  waitUntil(processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy.toLowerCase()))
+  // ── 同步等待解析完成再回傳（背景 waitUntil 在 Cloudflare 不保證跑完，會卡在 parsing）
+  await processGame(env, submissionId, imageBuffers, rawUserInput, submittedBy.toLowerCase())
 
   return json({ submissionId, status: 'processing' })
 }
@@ -86,23 +86,11 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
     // 轉 base64
     const imageBase64s = imageBuffers.map(buf => bufToBase64(buf))
 
-    // 先用 Haiku（快、便宜）解析並過硬性驗證；沒過就換 Sonnet（準）重跑一次
-    const attempt = async (model) => {
-      const p = await parseWithModel(env, model, imageBase64s, rawUserInput, imageBuffers.length)
-      if (p.fatalError) throw new Error(p.fatalErrorMessage || '截圖無法辨識')
-      const v = validateGame(p)
-      if (v) throw new Error(v)
-      return p
-    }
-    let parsed, usedModel
-    try {
-      parsed = await attempt('claude-haiku-4-5')
-      usedModel = 'haiku'
-    } catch (haikuErr) {
-      // Haiku 看錯 / 格式錯 / 驗證不過 → 用 Sonnet 補救；再失敗才真的失敗（往上拋給 catch）
-      parsed = await attempt('claude-sonnet-4-6')
-      usedModel = 'sonnet'
-    }
+    // 單一模型（Haiku，快、約 30 秒內），過硬性驗證；失敗直接回報失敗，不再接力備援（會超時）
+    const parsed = await parseWithModel(env, 'claude-haiku-4-5', imageBase64s, rawUserInput, imageBuffers.length)
+    if (parsed.fatalError) throw new Error(parsed.fatalErrorMessage || '截圖無法辨識，請重拍清楚一點再上傳')
+    const validationError = validateGame(parsed)
+    if (validationError) throw new Error(validationError)
 
     await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
       parsed_game_json: parsed,
