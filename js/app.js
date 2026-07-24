@@ -208,6 +208,7 @@ function standingsCard() {
 
 /* ---------- 戰報卡（近況洞察 + 賽程建議，純數據、不用 AI） ---------- */
 const RECENT_N = 3;                              // 近況取每人最近 N 場
+let lastReportPick = {};                          // 記住每人上一則，避免連按洗牌跳出同一句
 const fmtAvg = (v) => v.toFixed(3).replace(/^0/, '');
 const lc = (p) => p.toLowerCase();               // 玩家名 → 顏色 class（scott/alvin/vincent）
 
@@ -427,16 +428,30 @@ function reportCard() {
   PLAYERS.forEach(p => aggs[p] = recentAgg(p));
   const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
 
-  // 每人算出所有候選，再做橫向反重複挑選（避免三人同一次都講同類）
+  // 每人算出所有候選，加權隨機挑一則（分數越高越常出現），橫向反重複＋避免與上次相同
   const candsBy = {};
   PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
   const picked = {};
   const fam = c => (c.cat || '').split('-')[0];   // 大類：bat/pit/drama/h2h/team/streak…
+  const weightedPick = (list) => {
+    const total = list.reduce((s, c) => s + Math.max(c.score, 1), 0);
+    let r = Math.random() * total;
+    for (const c of list) { r -= Math.max(c.score, 1); if (r <= 0) return c; }
+    return list[list.length - 1];
+  };
   const usedFam = new Set();
   [...PLAYERS].sort((p1, p2) => (candsBy[p2][0]?.score || 0) - (candsBy[p1][0]?.score || 0)).forEach(p => {
-    const list = candsBy[p];
-    const choice = list.find(c => !usedFam.has(fam(c))) || list[0];
+    let pool = candsBy[p].filter(c => !usedFam.has(fam(c)));
+    if (!pool.length) pool = candsBy[p];
+    const real = pool.filter(c => !c.neutral);
+    if (real.length) pool = real;
+    if (pool.length > 1 && lastReportPick[p]) {                 // 避免連按跳出同一則
+      const fresh = pool.filter(c => c.html !== lastReportPick[p]);
+      if (fresh.length) pool = fresh;
+    }
+    const choice = pool.length ? weightedPick(pool) : candsBy[p][0];
     picked[p] = choice;
+    lastReportPick[p] = choice.html;
     if (choice && !choice.neutral) usedFam.add(fam(choice));
   });
 
@@ -456,8 +471,8 @@ function reportCard() {
     ? '大家場次已很平均，隨便打都行'
     : '打這場能拉平大家的場次';
 
-  return `<div class="card report-card">
-      <div class="report-head"><span class="t">戰報</span><span class="sub">近 ${RECENT_N} 場</span></div>
+  return `<div class="card report-card" id="report-card" onclick="shuffleReport()">
+      <div class="report-head"><span class="t">戰報<span class="sub">近 ${RECENT_N} 場</span></span><span class="report-shuffle">↻ 換一則</span></div>
       <div class="report-insights">${insights}</div>
       <div class="report-div"></div>
       <div class="report-sched">
@@ -467,6 +482,12 @@ function reportCard() {
         <div class="sched-note">${evenNote}</div>
       </div>
     </div>`;
+}
+
+// 點戰報卡片：純前端重算，只換卡片那塊 DOM（不連網）
+function shuffleReport() {
+  const el = document.getElementById('report-card');
+  if (el) el.outerHTML = reportCard();
 }
 
 function viewHome() {
