@@ -206,9 +206,142 @@ function standingsCard() {
   </div>`;
 }
 
+/* ---------- 戰報卡（近況洞察 + 賽程建議，純數據、不用 AI） ---------- */
+const RECENT_N = 3;                              // 近況取每人最近 N 場
+const fmtAvg = (v) => v.toFixed(3).replace(/^0/, '');
+const lc = (p) => p.toLowerCase();               // 玩家名 → 顏色 class（scott/alvin/vincent）
+
+// 某玩家最近 n 場（他有出賽的），DATA.games 為新到舊
+function recentGamesOf(player, n = RECENT_N) {
+  const out = [];
+  for (const g of DATA.games) {
+    if (g.sides.some(s => s.player === player)) { out.push(g); if (out.length >= n) break; }
+  }
+  return out;
+}
+
+// 某玩家近 n 場的彙總
+function recentAgg(player, n = RECENT_N) {
+  const gs = recentGamesOf(player, n);
+  const a = { games: gs.length, hr: 0, ab: 0, h: 0, so: 0, er: 0, outs: 0, runs: 0, hrPerGame: [], wl: [] };
+  gs.forEach(g => {
+    const s = sideOf(g, player);
+    let ghr = 0;
+    s.batting.forEach(b => { a.ab += b.ab || 0; a.h += b.h || 0; ghr += b.hr || 0; });
+    a.hr += ghr; a.hrPerGame.push(ghr);
+    s.pitching.forEach(p => { a.so += p.so || 0; a.er += p.er || 0; a.outs += ipToOuts(p.ip); });
+    a.runs += s.runs;
+    a.wl.push(g.winner === player ? 'w' : 'l');   // 新到舊
+  });
+  a.avg = a.ab > 0 ? a.h / a.ab : 0;
+  a.era = a.outs > 0 ? a.er * 27 / a.outs : null;
+  a.soPerGame = a.games ? a.so / a.games : 0;
+  return a;
+}
+
+// 為單一玩家挑一句最突出的評語
+function insightFor(player, aggs) {
+  const a = aggs[player];
+  if (a.games === 0) return { html: '近期無出賽', neutral: true };
+  const others = PLAYERS.map(p => aggs[p]);
+  const maxHr = Math.max(...others.map(x => x.hr));
+  const maxSoPG = Math.max(...others.map(x => x.soPerGame));
+  const minEra = Math.min(...others.map(x => x.era ?? Infinity));
+  const cands = [];
+
+  // 長打火力
+  let hrStreak = 0;
+  for (const v of a.hrPerGame) { if (v >= 1) hrStreak++; else break; }
+  if (hrStreak >= 2) cands.push({ html: `近 ${hrStreak} 場場場開轟，長打火力全開 🔥`, score: 92 + hrStreak });
+  else if (a.hr >= 3 && a.hr === maxHr) cands.push({ html: `近 ${a.games} 場敲 ${a.hr} 發全壘打，全場最兇`, score: 76 });
+
+  // 投手表現
+  if (a.games >= 2 && a.soPerGame === maxSoPG && a.soPerGame >= 5)
+    cands.push({ html: `場均 ${a.soPerGame.toFixed(1)} 次三振，投球火燙`, score: 70 });
+  else if (a.games >= 2 && a.era != null && a.era < 3 && a.era === minEra)
+    cands.push({ html: `防禦率 ${a.era.toFixed(2)}，牛棚穩如泰山`, score: 68 });
+
+  // 打擊率（需足夠打數）
+  if (a.ab >= 8) {
+    const lowest = a.avg === Math.min(...others.map(x => x.ab >= 8 ? x.avg : Infinity));
+    const highest = a.avg === Math.max(...others.map(x => x.ab >= 8 ? x.avg : -1));
+    if (a.avg < 0.230 && lowest) cands.push({ html: `團隊打擊 ${fmtAvg(a.avg)}，該練打囉`, score: 66 });
+    else if (a.avg > 0.300 && highest) cands.push({ html: `團隊打擊 ${fmtAvg(a.avg)}，棒子發燙`, score: 64 });
+  }
+
+  // 連勝連敗
+  let stk = 1;
+  for (let i = 1; i < a.wl.length; i++) { if (a.wl[i] === a.wl[0]) stk++; else break; }
+  if (stk >= 2) cands.push(a.wl[0] === 'w'
+    ? { html: `${stk} 連勝，氣勢正旺`, score: 56 + stk }
+    : { html: `${stk} 連敗，需要止血`, score: 55 + stk });
+
+  if (!cands.length) {
+    const w = a.wl.filter(x => x === 'w').length;
+    return { html: `近 ${a.games} 場 ${w} 勝 ${a.games - w} 敗，打擊 ${fmtAvg(a.avg)}`, neutral: true };
+  }
+  cands.sort((x, y) => y.score - x.score);
+  return cands[0];
+}
+
+// 賽程建議：挑目前場次最少的一對；平手時「距上次最久」優先
+function scheduleSuggestion() {
+  const pairs = [];
+  for (let i = 0; i < PLAYERS.length; i++)
+    for (let j = i + 1; j < PLAYERS.length; j++) pairs.push([PLAYERS[i], PLAYERS[j]]);
+  const key = (x, y) => [x, y].sort().join('|');
+  const count = {}, lastIdx = {};
+  pairs.forEach(([x, y]) => { count[key(x, y)] = 0; lastIdx[key(x, y)] = Infinity; });
+  DATA.games.forEach((g, idx) => {
+    if (g.sides.length !== 2) return;
+    const k = key(g.sides[0].player, g.sides[1].player);
+    if (count[k] == null) return;
+    count[k]++;
+    if (idx < lastIdx[k]) lastIdx[k] = idx;        // 新到舊：越小越近
+  });
+  // 場次少優先；平手時最近一次對戰越久遠（lastIdx 越大 / 未打過=Infinity）越優先
+  const ranked = pairs.map(([x, y]) => ({ x, y, k: key(x, y), c: count[key(x, y)], last: lastIdx[key(x, y)] }))
+    .sort((a, b) => a.c - b.c || b.last - a.last);
+  return { best: ranked[0], pairs: pairs.map(([x, y]) => ({ x, y, c: count[key(x, y)], k: key(x, y) })) };
+}
+
+function reportCard() {
+  const aggs = {};
+  PLAYERS.forEach(p => aggs[p] = recentAgg(p));
+
+  const insights = PLAYERS.map(p => {
+    const ins = insightFor(p, aggs);
+    return `<div class="ri">
+        <span class="dot ${lc(p)}"></span>
+        <span class="txt"><span class="nm ${lc(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>
+      </div>`;
+  }).join('');
+
+  const s = scheduleSuggestion();
+  const bal = s.pairs.map(pr =>
+    `<span class="${pr.k === s.best.k ? 'hl' : ''}">${pr.x[0]}-${pr.y[0]} ${pr.c}</span>`
+  ).join(' · ');
+  const evenNote = s.pairs.every(pr => pr.c === s.best.c)
+    ? '大家場次已很平均，隨便打都行'
+    : '打這場能拉平大家的場次';
+
+  return `<div class="card report-card">
+      <div class="report-head"><span class="t">戰報</span><span class="sub">近 ${RECENT_N} 場</span></div>
+      <div class="report-insights">${insights}</div>
+      <div class="report-div"></div>
+      <div class="report-sched">
+        <div class="sched-label">下一場建議</div>
+        <div class="sched-match"><span class="nm ${lc(s.best.x)}">${esc(s.best.x)}</span><span class="vs">vs</span><span class="nm ${lc(s.best.y)}">${esc(s.best.y)}</span></div>
+        <div class="sched-bal">目前場次　${bal}</div>
+        <div class="sched-note">${evenNote}</div>
+      </div>
+    </div>`;
+}
+
 function viewHome() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄，貼 box score 給 Claude 就會出現在這。</div>`;
   return `
+    ${reportCard()}
     ${standingsCard()}
     ${compareCard()}
     <div class="section-title">近期對戰</div>

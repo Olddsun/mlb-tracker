@@ -178,6 +178,36 @@ main.wrap { padding-top: 28px; }
 .h2h-vs { font-size: clamp(15px, 4vw, 22px); font-weight: 700; color: var(--muted); flex: none; }
 .h2h-sub { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 
+/* 戰報卡（近況 + 賽程建議） */
+.report-card { padding: 18px 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+.report-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 15px; }
+.report-head .t { font-size: 16px; font-weight: 800; letter-spacing: 2px; }
+.report-head .sub { font-size: 12px; color: var(--muted); font-weight: 600; }
+.report-insights { display: flex; flex-direction: column; gap: 12px; }
+.ri { display: flex; align-items: flex-start; gap: 9px; }
+.ri .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
+.ri .dot.scott { background: var(--scott); }
+.ri .dot.alvin { background: var(--alvin); }
+.ri .dot.vincent { background: var(--vincent); }
+.ri .txt { font-size: 14px; line-height: 1.45; }
+.ri .nm { font-weight: 700; margin-right: 7px; }
+.ri .nm.scott { color: var(--scott); }
+.ri .nm.alvin { color: var(--alvin); }
+.ri .nm.vincent { color: var(--vincent); }
+.ri .msg { color: var(--text); }
+.ri .msg.neutral { color: var(--muted); }
+.report-div { height: 1px; background: var(--border); margin: 16px 0 15px; }
+.report-sched { text-align: center; }
+.sched-label { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 9px; }
+.sched-match { font-family: var(--condensed); font-size: 23px; font-weight: 800; margin-bottom: 10px; letter-spacing: .5px; }
+.sched-match .nm.scott { color: var(--scott); }
+.sched-match .nm.alvin { color: var(--alvin); }
+.sched-match .nm.vincent { color: var(--vincent); }
+.sched-match .vs { color: var(--muted); font-size: 14px; margin: 0 10px; font-weight: 600; }
+.sched-bal { font-size: 12.5px; color: var(--muted); }
+.sched-bal .hl { color: var(--accent); font-weight: 700; }
+.sched-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
 .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
 .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 8px; text-align: center; }
 .stat-box .v { font-family: var(--condensed); font-size: clamp(24px, 6vw, 30px); font-weight: 700; letter-spacing: .5px; }
