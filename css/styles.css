@@ -232,6 +232,35 @@ main.wrap { padding-top: 28px; }
 /* ---------- Game detail ---------- */
 .back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 15px; margin-bottom: 16px; cursor: pointer; min-height: 44px; touch-action: manipulation; }
 .back:active { color: var(--text); }
+
+/* 比賽詳情頁：返回 + 刪除 一列 */
+.detail-top { display: flex; align-items: center; justify-content: space-between; }
+.detail-top .back { margin-bottom: 16px; }
+.del-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px; margin-bottom: 16px;
+  background: transparent; border: none; color: var(--muted);
+  border-radius: 10px; cursor: pointer; touch-action: manipulation; transition: all .15s;
+}
+.del-btn:active { color: var(--loss); background: rgba(240,82,82,0.14); }
+
+/* 刪除確認 modal */
+.confirm-backdrop {
+  position: fixed; inset: 0; z-index: 100; padding: 24px;
+  background: rgba(0,0,0,0.62); display: flex; align-items: center; justify-content: center;
+}
+.confirm-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 20px 20px; max-width: 340px; width: 100%; box-shadow: var(--shadow); text-align: center;
+}
+.confirm-title { font-size: 19px; font-weight: 800; margin-bottom: 12px; }
+.confirm-msg { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
+.confirm-msg b { color: var(--text); }
+.confirm-box button { width: 100%; padding: 14px; border-radius: 11px; font-size: 15px; font-weight: 700; border: none; cursor: pointer; touch-action: manipulation; }
+.confirm-del { background: var(--loss); color: #fff; margin-bottom: 10px; }
+.confirm-del:disabled { opacity: .6; }
+.confirm-cancel { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.confirm-cancel:active { border-color: var(--muted); }
 .detail-head { padding: 18px 16px; box-shadow: var(--shadow); margin-bottom: 8px; }
 .dh-line { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
 .dh-line .tcolor { width: 6px; height: 36px; border-radius: 3px; flex: none; }

@@ -665,7 +665,12 @@ function viewGame(id) {
   if (n.errors?.length) notesBits.push(`<b>失誤</b> ${n.errors.map(esc).join('、')}`);
 
   return `
-    <div class="back" onclick="history.back()">← 返回</div>
+    <div class="detail-top">
+      <div class="back" onclick="history.back()">← 返回</div>
+      <button class="del-btn" onclick="confirmDeleteGame('${g.id}')" aria-label="刪除這場比賽" title="刪除這場比賽">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>
     <div class="card detail-head">
       ${ordered.map(headLine).join('')}
       ${g.playerOfGame ? `<div class="pog">★ 單場最佳：${esc(g.playerOfGame.name)}（${esc(g.playerOfGame.team)}）</div>` : ''}
@@ -676,6 +681,47 @@ function viewGame(id) {
     ${ordered.map(pitchingTable).join('')}
     ${notesBits.length ? `<div class="notes-line">${notesBits.join(' &nbsp;·&nbsp; ')}</div>` : ''}
   `;
+}
+
+// 刪除比賽：防呆確認 → 呼叫 API → 移除本地資料、回首頁
+function confirmDeleteGame(id) {
+  const g = DATA.games.find(x => x.id === id);
+  const who = g ? g.sides.map(s => esc(s.player)).join(' vs ') : '這場比賽';
+  const when = g ? fmtDate(g.date) : '';
+
+  const el = document.createElement('div');
+  el.className = 'confirm-backdrop';
+  el.innerHTML = `<div class="confirm-box" role="alertdialog" aria-label="確定刪除">
+      <div class="confirm-title">確定刪除？</div>
+      <div class="confirm-msg">將永久刪除 <b>${who}</b>${when ? `（${when}）` : ''} 的完整紀錄，<br>刪除後無法復原。</div>
+      <button class="confirm-del" id="cf-del">刪除</button>
+      <button class="confirm-cancel" id="cf-cancel">取消</button>
+    </div>`;
+  document.body.appendChild(el);
+
+  const close = () => el.remove();
+  el.addEventListener('click', e => { if (e.target === el) close(); });
+  el.querySelector('#cf-cancel').onclick = close;
+  el.querySelector('#cf-del').onclick = async () => {
+    const btn = el.querySelector('#cf-del');
+    btn.disabled = true; btn.textContent = '刪除中…';
+    try {
+      const res = await fetch('/api/delete-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || '刪除失敗'); }
+      DATA.games = DATA.games.filter(x => x.id !== id);   // 先本地移除，畫面即時反映
+      close();
+      location.hash = '#/';
+      try { const r = await fetch('/api/games'); DATA = await r.json(); } catch { /* 用本地資料即可 */ }
+      render();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = '刪除';
+      alert('刪除失敗：' + err.message);
+    }
+  };
 }
 
 const P_DOT_CLS = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
