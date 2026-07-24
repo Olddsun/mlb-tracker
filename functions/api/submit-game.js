@@ -89,6 +89,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput, submit
     // 單一模型（Haiku，快、約 30 秒內），過硬性驗證；失敗直接回報失敗，不再接力備援（會超時）
     const parsed = await parseWithModel(env, 'claude-haiku-4-5', imageBase64s, rawUserInput, imageBuffers.length)
     if (parsed.fatalError) throw new Error(parsed.fatalErrorMessage || '截圖無法辨識，請重拍清楚一點再上傳')
+    reconcileInnings(parsed)   // 逐局比第 1 局常被隊名擋住 → 用總分自動補回，再驗證
     const validationError = validateGame(parsed)
     if (validationError) throw new Error(validationError)
 
@@ -197,6 +198,24 @@ async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount
   const claudeData = await claudeRes.json()
   const raw = claudeData.content[0].text.replace(/```json\n?|\n?```/g, '').trim()
   return JSON.parse(raw)   // 格式錯會 throw，交由上層決定是否換模型補救
+}
+
+// ── 逐局自動校正 ──────────────────────────────────────────────
+// 總分 R 是最可信的（大字、好讀）。逐局那排最左的第 1 局常被隊名面板擋住沒截到，
+// 導致逐局加總「少」於總分 —— 把差額補回第 1 局，讓記錄的總分維持正確。
+// 若逐局加總「多」於總分（可能真的看錯），不動它，交給 validateGame 擋下。
+function reconcileInnings(p) {
+  const sum = arr => arr.reduce((s, v) => { const n = parseInt(v); return s + (isNaN(n) ? 0 : n) }, 0)
+  for (const side of ['home', 'away']) {
+    const innings = p.innings?.[side]
+    const total = side === 'home' ? p.home_score : p.away_score
+    if (!Array.isArray(innings) || !innings.length || typeof total !== 'number') continue
+    const diff = total - sum(innings)
+    if (diff > 0) {
+      const first = parseInt(innings[0])
+      innings[0] = String((isNaN(first) ? 0 : first) + diff)   // 差額補回第 1 局
+    }
+  }
 }
 
 // ── 驗證 ──────────────────────────────────────────────────────
