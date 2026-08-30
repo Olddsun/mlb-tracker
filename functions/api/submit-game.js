@@ -20,15 +20,6 @@ async function parsePhase(context) {
     return json({ error: '請求格式錯誤' }, 400)
   }
 
-  const submittedBy = formData.get('submittedBy')
-  const token = formData.get('token')
-
-  // ── Token 驗證
-  const PLAYER_TOKENS = JSON.parse(env.PLAYER_TOKENS || '{}')
-  if (!submittedBy || PLAYER_TOKENS[submittedBy] !== token) {
-    return json({ error: 'Token 錯誤' }, 401)
-  }
-
   // ── 讀取圖片 buffer（張數不限，讀到沒有 image_i 為止；在回應前讀完，背景才能用）
   const imageBuffers = []
   for (let i = 0; ; i++) {
@@ -47,7 +38,6 @@ async function parsePhase(context) {
     headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({
       id: submissionId,
-      submitted_by: submittedBy.toLowerCase(),
       image_paths: imagePaths,
       status: 'received',
     }),
@@ -102,17 +92,30 @@ async function commitPhase(context) {
   const parsed = sub.parsed_game_json
   if (!parsed) return json({ error: '沒有可記錄的資料，請重新上傳' }, 400)
 
-  // ── 玩家指定：核對畫面選好「兩隊各是誰」才能記錄
-  const validPlayers = Object.keys(JSON.parse(env.PLAYER_TOKENS || '{}'))
-  const homePlayer = body.homePlayer
-  const awayPlayer = body.awayPlayer
-  if (!validPlayers.includes(homePlayer) || !validPlayers.includes(awayPlayer)) {
-    return json({ error: '請先指定兩隊各是哪位玩家' }, 400)
-  }
-  if (homePlayer === awayPlayer) return json({ error: '兩隊不能是同一位玩家' }, 400)
+  // ── 玩家指定：核對畫面選好「兩隊各是誰」才能記錄（可以是既有玩家或新名字）
+  const homePlayer = String(body.homePlayer || '').trim()
+  const awayPlayer = String(body.awayPlayer || '').trim()
+  if (!homePlayer || !awayPlayer) return json({ error: '請先指定兩隊各是哪位玩家' }, 400)
+  if (homePlayer.length > 20 || awayPlayer.length > 20) return json({ error: '玩家名稱太長（上限 20 字）' }, 400)
+  const homeId = homePlayer.toLowerCase()
+  const awayId = awayPlayer.toLowerCase()
+  if (homeId === awayId) return json({ error: '兩隊不能是同一位玩家' }, 400)
 
-  parsed.home_player = homePlayer.toLowerCase()
-  parsed.away_player = awayPlayer.toLowerCase()
+  // 確保 players 表有這兩位：新玩家自動建立，既有玩家跳過（不覆蓋原本的顯示名）
+  const upRes = await fetch(`${SUPABASE_URL}/rest/v1/players?on_conflict=id`, {
+    method: 'POST',
+    headers: { ...sbHeaders, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
+    body: JSON.stringify([
+      { id: homeId, display_name: homePlayer },
+      { id: awayId, display_name: awayPlayer },
+    ]),
+  })
+  if (!upRes.ok) return json({ error: `玩家建立失敗：${(await upRes.text()).slice(0, 200)}` }, 500)
+
+  parsed.home_player = homeId
+  parsed.away_player = awayId
+  parsed.home_player_name = homePlayer
+  parsed.away_player_name = awayPlayer
   parsed.winner = parsed.home_score > parsed.away_score ? parsed.home_player : parsed.away_player
 
   // 先把玩家指定寫回 submission 再寫正式資料，中斷重試時畫面才有名字
@@ -131,7 +134,7 @@ async function commitPhase(context) {
   }
 
   try {
-    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId, (sub.submitted_by || '').toLowerCase())
+    const gameId = await writeGame(SUPABASE_URL, sbHeaders, parsed, submissionId)
     await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'committed', game_id: gameId })
     return json({ ok: true, game: toDisplayGame(parsed), warnings: buildWarnings(sub) })
   } catch (e) {
@@ -308,7 +311,7 @@ async function detectDuplicates(SUPABASE_URL, headers, p) {
   } catch { return [] }
 }
 
-async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
+async function writeGame(SUPABASE_URL, headers, p, submissionId) {
   const ph = { ...headers, 'Content-Type': 'application/json', 'Prefer': 'return=representation' }
   const h = { ...headers, 'Content-Type': 'application/json' }
 
@@ -320,7 +323,6 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId, submittedBy) {
       winner_player_id: (p.winner || '').toLowerCase(),
       player_of_game_name: p.player_of_game?.name ?? null,
       player_of_game_team: p.player_of_game?.team ?? null,
-      submitted_by: submittedBy,
       submission_id: submissionId,
       source: 'ai_submission',
     }),
@@ -424,11 +426,13 @@ const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : ''
 // 把解析後的 JSON 轉成前端審核/成功畫面用的形狀
 function toDisplayGame(p) {
   if (!p) return null
+  const homeName = p.home_player_name || cap(p.home_player)
+  const awayName = p.away_player_name || cap(p.away_player)
   return {
-    homePlayer: cap(p.home_player), awayPlayer: cap(p.away_player),
+    homePlayer: homeName, awayPlayer: awayName,
     homeTeam: p.home_team, awayTeam: p.away_team,
     homeScore: p.home_score, awayScore: p.away_score,
-    winner: cap(p.winner),
+    winner: p.winner ? (p.winner === p.home_player ? homeName : awayName) : '',
     playerOfGame: p.player_of_game || null,
     homeBatting: p.batting?.home ?? [], awayBatting: p.batting?.away ?? [],
     homePitching: p.pitching?.home ?? [], awayPitching: p.pitching?.away ?? [],

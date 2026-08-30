@@ -63,16 +63,6 @@
   textarea { resize: none; height: 80px; line-height: 1.5; }
   ::placeholder { color: var(--muted); }
 
-  /* Player select */
-  .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .player-btn {
-    background: var(--surface); border: 2px solid var(--border);
-    border-radius: 12px; padding: 16px 8px; text-align: center;
-    cursor: pointer; transition: all 0.15s; color: var(--text);
-    font-size: 15px; font-weight: 600;
-  }
-  .player-btn.selected { border-color: var(--accent); background: rgba(79,142,247,0.12); color: var(--accent); }
-
   /* 指定玩家（核對畫面） */
   .assign-box {
     background: var(--surface); border: 1px solid var(--border);
@@ -82,8 +72,8 @@
   .assign-row:last-child { margin-bottom: 0; }
   .assign-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
   .assign-label b { color: var(--text); }
-  .assign-box .player-btn { background: var(--bg); }
-  .assign-box .player-btn.selected { background: rgba(79,142,247,0.12); }
+  .assign-box select, .assign-box input[type=text] { background: var(--bg); }
+  .new-player-input { margin-top: 8px; }
 
   /* 核對數據畫面 */
   .rv-hint { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
@@ -206,20 +196,6 @@
     <input type="file" id="file-input-multi" accept="image/*" multiple>
     <input type="file" id="file-input-single" accept="image/*">
 
-    <div class="field" style="margin-top:28px">
-      <label>提交者（驗證身分用）</label>
-      <div class="player-grid" id="submitter-grid">
-        <button class="player-btn" data-player="Scott" onclick="selectPlayer(this)">Scott</button>
-        <button class="player-btn" data-player="Alvin" onclick="selectPlayer(this)">Alvin</button>
-        <button class="player-btn" data-player="Vincent" onclick="selectPlayer(this)">Vincent</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="token-input">Token</label>
-      <input type="text" id="token-input" placeholder="輸入你的名字" autocomplete="off" autocorrect="off">
-    </div>
-
     <button class="btn btn-primary" id="submit-btn" onclick="submitGame()" disabled>
       送出分析
     </button>
@@ -237,25 +213,16 @@
 </div>
 
 <script>
-let selectedPlayer = ''
 let currentSlot = -1
 let images = []  // 動態張數，每個元素是壓縮後的 blob
 let currentSubmissionId = null
-let assign = { home: '', away: '' }   // 核對畫面：兩隊各是哪位玩家
 
-const ALL_PLAYERS = ['Scott', 'Alvin', 'Vincent']
+let ROSTER = ['Scott', 'Alvin', 'Vincent']   // 玩家清單，開頁時從 API 更新（失敗就用預設）
+fetch('/api/players').then(r => r.json()).then(d => {
+  if (Array.isArray(d.players) && d.players.length) ROSTER = d.players.map(p => p.name)
+}).catch(() => {})
+
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-
-function selectPlayer(btn) {
-  document.querySelectorAll('#submitter-grid .player-btn').forEach(b => b.classList.remove('selected'))
-  btn.classList.add('selected')
-  selectedPlayer = btn.dataset.player
-  const tokenInput = document.getElementById('token-input')
-  if (!tokenInput.value) tokenInput.value = selectedPlayer
-  updateSubmitBtn()
-}
-
-document.getElementById('token-input').addEventListener('input', updateSubmitBtn)
 
 function showStep(id) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
@@ -323,8 +290,7 @@ function removeImage(e, index) {
 }
 
 function updateSubmitBtn() {
-  const token = document.getElementById('token-input').value.trim()
-  document.getElementById('submit-btn').disabled = !(images.length >= 1 && selectedPlayer && token)
+  document.getElementById('submit-btn').disabled = images.length < 1
 }
 
 async function compressImage(file) {
@@ -347,17 +313,12 @@ async function compressImage(file) {
 
 async function submitGame() {
   if (!images.length) return alert('請至少上傳 1 張截圖')
-  if (!selectedPlayer) return alert('請選擇提交者')
-  const token = document.getElementById('token-input').value.trim()
-  if (!token) return alert('請輸入 Token')
 
   showStep('step-processing')
   setMsg('AI 解析中，約需 30 秒 ⏳　請留在此畫面、不要離開或關閉，否則會讀取失敗')
 
   try {
     const formData = new FormData()
-    formData.append('submittedBy', selectedPlayer)
-    formData.append('token', token)
     images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
     // 後端同步解析完回應（約 30 秒），回來是解析結果讓你先核對＋指定玩家，不會直接記錄
@@ -374,16 +335,20 @@ async function submitGame() {
 // 核對畫面：AI 讀到的隊伍/比分/數據攤開核對，並指定兩隊各是哪位玩家，確認才記錄
 function showReview(data) {
   currentSubmissionId = data.submissionId
-  assign = { home: '', away: '' }
   const g = data.game
   const warns = []
   if (data.needsReview) warns.push('AI 對部分數據不太確定，請仔細核對')
   if ((data.duplicates?.length ?? 0) > 0) warns.push('這場好像記過了（今天已有同兩隊的比賽紀錄）')
 
   const awayWon = g.awayScore > g.homeScore
-  const playerBtns = (side) => ALL_PLAYERS.map(p =>
-    `<button class="player-btn" data-player="${p}" onclick="pickAssign('${side}', this)">${p}</button>`
-  ).join('')
+  const playerSelect = (side) => `
+    <select id="sel-${side}" onchange="onAssignChange('${side}')">
+      <option value="">選擇玩家…</option>
+      ${ROSTER.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+      <option value="__new__">＋ 新增玩家…</option>
+    </select>
+    <input type="text" id="new-${side}" class="new-player-input" placeholder="輸入新玩家名字" maxlength="20"
+      autocomplete="off" autocorrect="off" style="display:none" oninput="refreshConfirm()">`
 
   const teamBlock = (label, teamName, batting, pitching) => `
     <div class="rv-team">
@@ -410,11 +375,11 @@ function showReview(data) {
     <div class="assign-box">
       <div class="assign-row">
         <div class="assign-label">客隊 <b>${esc(g.awayTeam)}</b>（${g.awayScore} 分）是誰打的？</div>
-        <div class="player-grid" data-aside="away">${playerBtns('away')}</div>
+        ${playerSelect('away')}
       </div>
       <div class="assign-row">
         <div class="assign-label">主隊 <b>${esc(g.homeTeam)}</b>（${g.homeScore} 分）是誰打的？</div>
-        <div class="player-grid" data-aside="home">${playerBtns('home')}</div>
+        ${playerSelect('home')}
       </div>
     </div>
     ${g.playerOfGame ? `<div class="rv-pog">★ 單場最佳：${esc(g.playerOfGame.name)}（${esc(g.playerOfGame.team)}）</div>` : ''}
@@ -427,25 +392,28 @@ function showReview(data) {
   `
 }
 
-// 指定某一隊的玩家；同一人不能同時打兩隊，選了會把另一隊的相同人選清掉
-function pickAssign(side, btn) {
-  const p = btn.dataset.player
-  assign[side] = p
-  const other = side === 'home' ? 'away' : 'home'
-  if (assign[other] === p) assign[other] = ''
-  renderAssignState()
+// 下拉選到「＋ 新增玩家…」就顯示名字輸入框
+function onAssignChange(side) {
+  const isNew = document.getElementById('sel-' + side).value === '__new__'
+  const inp = document.getElementById('new-' + side)
+  inp.style.display = isNew ? 'block' : 'none'
+  if (isNew) inp.focus()
+  refreshConfirm()
 }
 
-function renderAssignState() {
-  for (const side of ['home', 'away']) {
-    document.querySelectorAll(`[data-aside="${side}"] .player-btn`).forEach(b =>
-      b.classList.toggle('selected', b.dataset.player === assign[side]))
-  }
-  const ok = assign.home && assign.away && assign.home !== assign.away
+// 該隊目前指定的玩家名（下拉值，或新增玩家輸入的名字）
+function assignValue(side) {
+  const v = document.getElementById('sel-' + side).value
+  return v === '__new__' ? document.getElementById('new-' + side).value.trim() : v
+}
+
+function refreshConfirm() {
+  const h = assignValue('home'), a = assignValue('away')
+  const ok = h && a && h.toLowerCase() !== a.toLowerCase()
   const btn = document.getElementById('rv-confirm')
   if (btn) {
     btn.disabled = !ok
-    btn.textContent = ok ? '確認無誤，記錄這場' : '先選好兩隊是誰'
+    btn.textContent = ok ? '確認無誤，記錄這場' : (h && a ? '兩隊不能是同一位玩家' : '先選好兩隊是誰')
   }
 }
 
@@ -458,8 +426,8 @@ async function commitGame() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         submissionId: currentSubmissionId,
-        homePlayer: assign.home,
-        awayPlayer: assign.away,
+        homePlayer: assignValue('home'),
+        awayPlayer: assignValue('away'),
       }),
     })
     const data = await res.json()

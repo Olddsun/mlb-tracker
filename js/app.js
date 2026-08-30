@@ -1,6 +1,25 @@
 /* ============ MLB The Show Tracker — app logic ============ */
 
-const PLAYERS = ['Scott', 'Alvin', 'Vincent'];
+// 玩家清單：從比賽資料動態算出（元老三人固定排前面，之後照字母序），支援未來加入新玩家
+let PLAYERS = [];
+const LEGACY_ORDER = ['Scott', 'Alvin', 'Vincent'];
+function computePlayers() {
+  const inGames = [];
+  DATA.games.forEach(g => g.sides.forEach(s => { if (!inGames.includes(s.player)) inGames.push(s.player); }));
+  const legacy = LEGACY_ORDER.filter(p => inGames.includes(p));
+  const rest = inGames.filter(p => !legacy.includes(p)).sort((a, b) => a.localeCompare(b));
+  PLAYERS = [...legacy, ...rest];
+}
+
+// 玩家代表色：元老三人沿用原色，新玩家依序從備用色盤取
+const PLAYER_BASE_COLORS = { Scott: '#4f8ef7', Alvin: '#f5a524', Vincent: '#34d399' };
+const EXTRA_COLORS = ['#e0454f', '#9b6fc4', '#3bb0c4', '#f4b023', '#fd824a', '#8fd46f', '#d44a9b', '#aab4c0'];
+function playerColor(p) {
+  if (PLAYER_BASE_COLORS[p]) return PLAYER_BASE_COLORS[p];
+  const extras = PLAYERS.filter(x => !PLAYER_BASE_COLORS[x]);
+  const i = extras.indexOf(p);
+  return EXTRA_COLORS[(i >= 0 ? i : 0) % EXTRA_COLORS.length];
+}
 
 const MLB_IDS = {"Aaron Judge":592450,"Adolis García":666969,"Adrian Morejon":670970,"Agustín Ramírez":682663,"Alec Bohm":664761,"Alex Bregman":608324,"Alex Freeland":690976,"Andy Pages":681624,"Angel Martinez":682657,"Anthony Bender":669622,"Austin Riley":663586,"Austin Wells":669224,"Ben Williamson":810938,"Blake Treinen":595014,"Bo Naylor":666310,"Brad Keller":641745,"Brandon Marsh":669016,"Brandon Nimmo":607043,"Brayan Rocchio":677587,"Bryce Eldridge":805811,"Bryce Harper":547180,"Bryson Stott":681082,"Caleb Durbin":702332,"Carlos Narváez":665966,"Carson Kelly":608348,"Carson Williams":700246,"Ceddanne Rafaela":678882,"Cedric Mullins":656775,"Chandler Simpson":802415,"Chase DeLauter":800050,"Chris Martin":455119,"Chris Sale":519242,"Christopher Morel":666624,"Cody Bellinger":641355,"Colt Keith":690993,"Connor Norby":681393,"Corey Seager":608369,"Cristopher Sánchez":650911,"Daniel Palencia":694037,"Daniel Schneemann":682177,"Danny Jansen":643376,"Dansby Swanson":621020,"David Fry":681807,"Dillon Dingler":693307,"Dominic Smith":642086,"Drake Baldwin":686948,"Drew Rasmussen":656876,"Erik Sabrowski":681870,"Eury Pérez":691587,"Evan Carter":694497,"Fernando Tatis Jr.":665487,"Freddie Freeman":518692,"Freddy Fermin":666023,"Gabriel Arias":672356,"Garrett Crochet":676979,"Garrett Whitlock":676477,"Giancarlo Stanton":519317,"Gleyber Torres":650402,"Graham Pauley":688363,"Griffin Conine":665052,"Harrison Bader":664056,"Heliot Ramos":671218,"Ian Happ":664023,"Ian Seymour":693855,"J.T. Realmuto":592663,"Jackson Merrill":701538,"Jacob Latz":656641,"Jacob deGrom":594798,"Jake Burger":669394,"Jake Cronenworth":630105,"Jakob Marsee":805300,"Jalen Beeks":656222,"Jarren Duran":680776,"Javier Báez":595879,"Jazz Chisholm Jr.":665862,"Jeremiah Estrada":669093,"Joc Pederson":592626,"Jonathan Aranda":666018,"Jonny DeLuca":676356,"Josh Jung":673962,"Josh Smith":669701,"José Alvarado":621237,"José Caballero":676609,"José Ramírez":608070,"Jung Hoo Lee":808982,"Junior Caminero":691406,"Justin Crawford":702222,"Kerry Carpenter":681481,"Kevin McGonigle":805808,"Kyle Schwarber":656941,"Kyle Tucker":663656,"Logan Webb":657277,"Luis Arraez":650333,"Manny Machado":592518,"Marcelo Mayer":691785,"Matt Chapman":656305,"Matt Olson":621566,"Matthew Boyd":571510,"Mauricio Dubón":643289,"Max Fried":608331,"Max Muncy":571970,"Michael Busch":683737,"Michael Conforto":624424,"Michael Harris II":671739,"Miguel Andujar":609280,"Mike Yastrzemski":573262,"Moisés Ballesteros":694208,"Mookie Betts":605141,"Nick Fortes":663743,"Nick Pivetta":601713,"Nico Hoerner":663538,"Otto Lopez":672640,"Owen Caissie":683357,"Ozzie Albies":645277,"Parker Meadows":678009,"Patrick Bailey":672275,"Paul Goldschmidt":502671,"Pete Crow-Armstrong":691718,"Phil Maton":664208,"Rafael Devers":646240,"Raisel Iglesias":628452,"Ramón Laureano":657656,"Rhys Hoskins":656555,"Riley Greene":682985,"Roman Anthony":701350,"Ronald Acuña Jr.":660670,"Ryan Borucki":621366,"Ryan McMahon":641857,"Sam Haggerty":664059,"Shawn Armstrong":542888,"Shohei Ohtani":660271,"Spencer Torkelson":679529,"Steven Kwan":680757,"Tanner Bibee":676440,"Tarik Skubal":669373,"Teoscar Hernández":606192,"Trea Turner":607208,"Trent Grisham":663757,"Trevor Story":596115,"Ty France":664034,"Tyler Kinley":641755,"Will Smith":669257,"Willson Contreras":575929,"Willy Adames":642715,"Wilyer Abreu":677800,"Wyatt Langford":694671,"Xander Bogaerts":593428,"Xavier Edwards":669364,"Yandy Díaz":650490,"Yoshinobu Yamamoto":808967};
 
@@ -171,7 +190,6 @@ function standingsCard() {
     return count > 0 ? (type ? 'W' : 'L') + count : '-';
   };
 
-  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
   const fmtPct = (v) => v == null ? '-' : v.toFixed(3).replace(/^0/, '');
   const fmtDiff = (p) => { const d = rs[p] - ra[p]; return d > 0 ? `+${d}` : String(d); };
   const diffCls = (p) => { const d = rs[p] - ra[p]; return d > 0 ? 'diff-pos' : d < 0 ? 'diff-neg' : ''; };
@@ -189,7 +207,7 @@ function standingsCard() {
         ${rows.map(r => {
           const strk = streakStr(r.p);
           return `<tr>
-          <td class="sl"><div class="pl-row"><span class="s-dot ${P_CLR[r.p] || ''}"></span>${esc(r.p)}</div></td>
+          <td class="sl"><div class="pl-row"><span class="s-dot" style="background:${playerColor(r.p)}"></span>${esc(r.p)}</div></td>
           <td>${r.w}</td><td>${r.l}</td>
           <td class="mono">${fmtPct(r.pct)}</td>
           <td class="mono gb">${gbStr(r)}</td>
@@ -210,7 +228,6 @@ function standingsCard() {
 const RECENT_N = 3;                              // 近況取每人最近 N 場
 let lastReportPick = {};                          // 記住每人上一則，避免連按洗牌跳出同一句
 const fmtAvg = (v) => v.toFixed(3).replace(/^0/, '');
-const lc = (p) => p.toLowerCase();               // 玩家名 → 顏色 class（scott/alvin/vincent）
 
 // 某玩家最近 n 場（他有出賽的），DATA.games 為新到舊
 function recentGamesOf(player, n = RECENT_N) {
@@ -392,7 +409,7 @@ function insightCandidates(player, ctx) {
   const st = streakOf(player);
   if (st.streak >= 3) push('streak', st.type === 'w' ? `${st.streak} 連勝，氣勢正旺` : `${st.streak} 連敗，需要止血`, 54 + st.streak);
   if (career[player].mvp >= 2) push('mvp', `已 ${career[player].mvp} 次獲選單場 MVP`, 48);
-  if (rank[player] === 1 && career[player].games >= 3) push('rank', `目前戰績龍頭，三人之首`, 46);
+  if (rank[player] === 1 && career[player].games >= 3) push('rank', `目前戰績龍頭，聯盟之首`, 46);
   if (career[player].hr >= 20) push('milestone', `生涯累積轟破 ${Math.floor(career[player].hr / 10) * 10} 發`, 44);
 
   if (!cands.length) {
@@ -460,8 +477,8 @@ function reportCard() {
   const insights = PLAYERS.map(p => {
     const ins = picked[p];
     return `<div class="ri">
-        <span class="dot ${lc(p)}"></span>
-        <span class="txt"><span class="nm ${lc(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>
+        <span class="dot" style="background:${playerColor(p)}"></span>
+        <span class="txt"><span class="nm" style="color:${playerColor(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>
       </div>`;
   }).join('');
 
@@ -479,7 +496,7 @@ function reportCard() {
       <div class="report-div"></div>
       <div class="report-sched">
         <div class="sched-label">下一場建議</div>
-        <div class="sched-match"><span class="nm ${lc(s.best.x)}">${esc(s.best.x)}</span><span class="vs">vs</span><span class="nm ${lc(s.best.y)}">${esc(s.best.y)}</span></div>
+        <div class="sched-match"><span class="nm" style="color:${playerColor(s.best.x)}">${esc(s.best.x)}</span><span class="vs">vs</span><span class="nm" style="color:${playerColor(s.best.y)}">${esc(s.best.y)}</span></div>
         <div class="sched-bal">目前場次　${bal}</div>
         <div class="sched-note">${evenNote}</div>
       </div>
@@ -503,58 +520,52 @@ function viewHome() {
   `;
 }
 
+// 數據對比：每項數據列出全員排行（名字＋長條＋數值），人數多也放得下
 function compareCard() {
   const t = playerTotals();
   const eraNum = (p) => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null;
-  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : 0;
-  const P_CLR = ['s', 'a', 'v'];
+  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : null;
 
   const stats = [
-    { lab: '累積安打', vals: PLAYERS.map(p => t[p].h) },
-    { lab: '累積全壘打', vals: PLAYERS.map(p => t[p].hr) },
-    { lab: '累積三振（投手）', vals: PLAYERS.map(p => t[p].so) },
-    { lab: '平均得分', vals: PLAYERS.map(p => avgRun(p)), dp: 1 },
-    { lab: '團隊 ERA', vals: PLAYERS.map(p => eraNum(p)), dp: 2, lowerBetter: true }
+    { lab: '累積安打', val: p => t[p].h },
+    { lab: '累積全壘打', val: p => t[p].hr },
+    { lab: '累積三振（投手）', val: p => t[p].so },
+    { lab: '平均得分', val: avgRun, dp: 1 },
+    { lab: '團隊 ERA', val: eraNum, dp: 2, lowerBetter: true }
   ];
 
-  const rows = stats.map(st => {
-    const fmt = (v) => v == null ? '—' : (st.dp != null ? v.toFixed(st.dp) : v);
+  const blocks = stats.map(st => {
+    const ranked = PLAYERS.map(p => ({ p, v: st.val(p) })).filter(r => r.v != null)
+      .sort((a, b) => st.lowerBetter ? a.v - b.v : b.v - a.v);
+    if (!ranked.length) return '';
 
-    // 找領先者（有效值中最佳，不並列才標色）
-    const valid = st.vals.map((v, i) => v != null ? { v, i } : null).filter(Boolean);
-    let leaderIdx = -1;
-    if (valid.length > 0) {
-      const best = st.lowerBetter
-        ? valid.reduce((b, c) => c.v < b.v ? c : b)
-        : valid.reduce((b, c) => c.v > b.v ? c : b);
-      if (valid.filter(x => x.v === best.v).length === 1) leaderIdx = best.i;
-    }
+    const fmt = (v) => st.dp != null ? v.toFixed(st.dp) : v;
+    const bestV = ranked[0].v;
+    // 長條：最佳者滿格，其他人相對比例（ERA 這種越低越好的用倒數比）
+    const pct = (v) => {
+      let r;
+      if (st.lowerBetter) r = v > 0 ? (bestV > 0 ? bestV / v : 0) : 1;
+      else r = bestV > 0 ? v / bestV : 0;
+      return Math.max(6, Math.min(100, r * 100));
+    };
 
-    // 長條比例（lowerBetter 用倒數加權）
-    const barW = st.vals.map(v => v == null ? 0 : st.lowerBetter ? (v > 0 ? 1 / v : 0) : v);
-    const total = barW.reduce((s, v) => s + v, 0);
-    const pcts = total > 0 ? barW.map(v => v / total * 100) : barW.map(() => 100 / PLAYERS.length);
-
-    const cols = PLAYERS.map((p, i) => `
-      <div class="cmp-col${leaderIdx === i ? ' lead-' + P_CLR[i] : ''}">
-        <span class="v">${fmt(st.vals[i])}</span>
-        <span class="pname ${P_CLR[i]}">${p}</span>
+    const rows = ranked.map((r, i) => `
+      <div class="lb-row${r.v === bestV ? ' lead' : ''}">
+        <span class="lb-rank mono">${i + 1}</span>
+        <span class="lb-name">${esc(r.p)}</span>
+        <span class="lb-track"><span class="lb-fill" style="width:${pct(r.v).toFixed(1)}%;background:${playerColor(r.p)}"></span></span>
+        <span class="lb-val mono">${fmt(r.v)}</span>
       </div>`).join('');
 
-    const segs = PLAYERS.map((p, i) =>
-      `<span class="seg-${P_CLR[i]}" style="width:${pcts[i].toFixed(1)}%"></span>`
-    ).join('');
-
-    return `<div class="cmp-stat">
-        <div class="cmp-lab">${st.lab}</div>
-        <div class="cmp-cols">${cols}</div>
-        <div class="cmp-bar">${segs}</div>
+    return `<div class="lb-stat">
+        <div class="lb-lab">${st.lab}</div>
+        ${rows}
       </div>`;
   }).join('');
 
   return `<div class="card compare">
       <div class="cmp-title">數據對比</div>
-      ${rows}
+      ${blocks}
     </div>`;
 }
 
@@ -580,13 +591,15 @@ let gamesFilter = null; // null = 全部，或 ['Scott','Alvin'] 等
 function viewGames() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄。</div>`;
 
-  // 找出實際存在的對戰組合
-  const pairs = [
-    ['Scott','Alvin'], ['Scott','Vincent'], ['Alvin','Vincent']
-  ].filter(([a, b]) => DATA.games.some(g => {
-    const ps = g.sides.map(s => s.player);
-    return ps.includes(a) && ps.includes(b);
-  }));
+  // 找出實際存在的對戰組合（動態，依 PLAYERS 順序排）
+  const seen = new Map();
+  DATA.games.forEach(g => {
+    if (g.sides.length !== 2) return;
+    const [a, b] = [...g.sides.map(s => s.player)].sort((x, y) => PLAYERS.indexOf(x) - PLAYERS.indexOf(y));
+    seen.set(a + '|' + b, [a, b]);
+  });
+  const pairs = [...seen.values()].sort((p1, p2) =>
+    PLAYERS.indexOf(p1[0]) - PLAYERS.indexOf(p2[0]) || PLAYERS.indexOf(p1[1]) - PLAYERS.indexOf(p2[1]));
 
   const filtered = gamesFilter
     ? DATA.games.filter(g => {
@@ -717,6 +730,7 @@ function confirmDeleteGame(id) {
       close();
       DATA.games = DATA.games.filter(x => x.id !== id);         // 先本地移除
       try { const r = await fetch('/api/games'); DATA = await r.json(); } catch { /* 用本地資料即可 */ }
+      computePlayers();
       if (location.hash === '#/' || location.hash === '') render();   // 已在首頁：直接重繪
       else location.hash = '#/';                                 // 否則導回首頁（觸發一次 render）
     } catch (err) {
@@ -726,7 +740,6 @@ function confirmDeleteGame(id) {
   };
 }
 
-const P_DOT_CLS = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
 const chevronSvg = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
 function viewTeams() {
@@ -736,7 +749,6 @@ function viewTeams() {
 
   const section = (player, idx) => {
     const recs = byPlayer[player] || [];
-    const dotCls = P_DOT_CLS[player] || '';
     const content = recs.length
       ? `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
           <thead><tr><th class="l">隊伍</th><th>場次</th><th>勝</th><th>敗</th><th>勝率</th><th>得分</th><th>失分</th></tr></thead>
@@ -751,7 +763,7 @@ function viewTeams() {
 
     return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
       <summary class="player-section-hd">
-        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+        <span class="s-dot" style="background:${playerColor(player)}"></span>${esc(player)}${chevronSvg}
       </summary>
       ${content}
     </details>`;
@@ -792,14 +804,13 @@ function viewPlayers() {
 
   const section = (player, idx) => {
     const rows = playerTab === 'bat' ? (bat[player] || []) : (pit[player] || []);
-    const dotCls = P_DOT_CLS[player] || '';
     const content = rows.length
       ? (playerTab === 'bat' ? batTable(rows) : pitTable(rows))
       : `<div class="empty">還沒有 ${esc(player)} 的${playerTab === 'bat' ? '打擊' : '投球'}資料。</div>`;
 
     return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
       <summary class="player-section-hd">
-        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+        <span class="s-dot" style="background:${playerColor(player)}"></span>${esc(player)}${chevronSvg}
       </summary>
       ${content}
     </details>`;
@@ -816,7 +827,6 @@ function setPlayerTab(t) { playerTab = t; render(); }
 /* ---------- Player detail modal ---------- */
 function showPlayer(name) {
   const bat = battingByOwner(), pit = pitchingByOwner();
-  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
 
   const batRows = PLAYERS.map(p => ({ owner: p, d: bat[p]?.find(b => b.name === name) })).filter(x => x.d);
   const pitRows = PLAYERS.map(p => ({ owner: p, d: pit[p]?.find(b => b.name === name) })).filter(x => x.d);
@@ -829,7 +839,7 @@ function showPlayer(name) {
 
   const ownerBlock = (owner, stats, fields) => `
     <div class="pm-owner-block">
-      <div class="pm-owner-label"><span class="s-dot ${P_CLR[owner] || ''}"></span>${esc(owner)}</div>
+      <div class="pm-owner-label"><span class="s-dot" style="background:${playerColor(owner)}"></span>${esc(owner)}</div>
       <div class="pm-stats-grid">
         ${fields.map(f => `<div class="pm-stat"><span class="pm-v">${f.v(stats)}</span><span class="pm-l">${f.l}</span></div>`).join('')}
       </div>
@@ -902,6 +912,7 @@ async function refreshApp() {
   try {
     const res = await fetch('/api/games');
     DATA = await res.json();
+    computePlayers();
     render();
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
@@ -913,6 +924,7 @@ async function boot() {
   try {
     const res = await fetch('/api/games');
     DATA = await res.json();
+    computePlayers();
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
     return;
