@@ -31,8 +31,17 @@ function setSport(s) {
   if (s === SPORT) return;
   SPORT = s;
   localStorage.setItem('esl-sport', s);
+  gamesQuery = '';                       // 舊運動的搜尋條件套到新運動沒意義
   applySportFilter();
+  // 單場詳情屬於某一場比賽，換運動後留在原頁沒意義 → 回總覽（hashchange 會觸發 render）
+  if ((location.hash || '').startsWith('#/game/')) { location.hash = '#/'; return; }
   render();
+}
+
+// 頂列切換器的選取狀態（DOM 在 index.html，不隨頁面重繪）
+function syncSportSeg() {
+  document.querySelectorAll('.sport-seg button').forEach(b =>
+    b.setAttribute('aria-selected', String(b.id === 'seg-' + SPORT)));
 }
 
 const MLB_IDS = {"Aaron Judge":592450,"Adolis García":666969,"Adrian Morejon":670970,"Agustín Ramírez":682663,"Alec Bohm":664761,"Alex Bregman":608324,"Alex Freeland":690976,"Andy Pages":681624,"Angel Martinez":682657,"Anthony Bender":669622,"Austin Riley":663586,"Austin Wells":669224,"Ben Williamson":810938,"Blake Treinen":595014,"Bo Naylor":666310,"Brad Keller":641745,"Brandon Marsh":669016,"Brandon Nimmo":607043,"Brayan Rocchio":677587,"Bryce Eldridge":805811,"Bryce Harper":547180,"Bryson Stott":681082,"Caleb Durbin":702332,"Carlos Narváez":665966,"Carson Kelly":608348,"Carson Williams":700246,"Ceddanne Rafaela":678882,"Cedric Mullins":656775,"Chandler Simpson":802415,"Chase DeLauter":800050,"Chris Martin":455119,"Chris Sale":519242,"Christopher Morel":666624,"Cody Bellinger":641355,"Colt Keith":690993,"Connor Norby":681393,"Corey Seager":608369,"Cristopher Sánchez":650911,"Daniel Palencia":694037,"Daniel Schneemann":682177,"Danny Jansen":643376,"Dansby Swanson":621020,"David Fry":681807,"Dillon Dingler":693307,"Dominic Smith":642086,"Drake Baldwin":686948,"Drew Rasmussen":656876,"Erik Sabrowski":681870,"Eury Pérez":691587,"Evan Carter":694497,"Fernando Tatis Jr.":665487,"Freddie Freeman":518692,"Freddy Fermin":666023,"Gabriel Arias":672356,"Garrett Crochet":676979,"Garrett Whitlock":676477,"Giancarlo Stanton":519317,"Gleyber Torres":650402,"Graham Pauley":688363,"Griffin Conine":665052,"Harrison Bader":664056,"Heliot Ramos":671218,"Ian Happ":664023,"Ian Seymour":693855,"J.T. Realmuto":592663,"Jackson Merrill":701538,"Jacob Latz":656641,"Jacob deGrom":594798,"Jake Burger":669394,"Jake Cronenworth":630105,"Jakob Marsee":805300,"Jalen Beeks":656222,"Jarren Duran":680776,"Javier Báez":595879,"Jazz Chisholm Jr.":665862,"Jeremiah Estrada":669093,"Joc Pederson":592626,"Jonathan Aranda":666018,"Jonny DeLuca":676356,"Josh Jung":673962,"Josh Smith":669701,"José Alvarado":621237,"José Caballero":676609,"José Ramírez":608070,"Jung Hoo Lee":808982,"Junior Caminero":691406,"Justin Crawford":702222,"Kerry Carpenter":681481,"Kevin McGonigle":805808,"Kyle Schwarber":656941,"Kyle Tucker":663656,"Logan Webb":657277,"Luis Arraez":650333,"Manny Machado":592518,"Marcelo Mayer":691785,"Matt Chapman":656305,"Matt Olson":621566,"Matthew Boyd":571510,"Mauricio Dubón":643289,"Max Fried":608331,"Max Muncy":571970,"Michael Busch":683737,"Michael Conforto":624424,"Michael Harris II":671739,"Miguel Andujar":609280,"Mike Yastrzemski":573262,"Moisés Ballesteros":694208,"Mookie Betts":605141,"Nick Fortes":663743,"Nick Pivetta":601713,"Nico Hoerner":663538,"Otto Lopez":672640,"Owen Caissie":683357,"Ozzie Albies":645277,"Parker Meadows":678009,"Patrick Bailey":672275,"Paul Goldschmidt":502671,"Pete Crow-Armstrong":691718,"Phil Maton":664208,"Rafael Devers":646240,"Raisel Iglesias":628452,"Ramón Laureano":657656,"Rhys Hoskins":656555,"Riley Greene":682985,"Roman Anthony":701350,"Ronald Acuña Jr.":660670,"Ryan Borucki":621366,"Ryan McMahon":641857,"Sam Haggerty":664059,"Shawn Armstrong":542888,"Shohei Ohtani":660271,"Spencer Torkelson":679529,"Steven Kwan":680757,"Tanner Bibee":676440,"Tarik Skubal":669373,"Teoscar Hernández":606192,"Trea Turner":607208,"Trent Grisham":663757,"Trevor Story":596115,"Ty France":664034,"Tyler Kinley":641755,"Will Smith":669257,"Willson Contreras":575929,"Willy Adames":642715,"Wilyer Abreu":677800,"Wyatt Langford":694671,"Xander Bogaerts":593428,"Xavier Edwards":669364,"Yandy Díaz":650490,"Yoshinobu Yamamoto":808967};
@@ -102,11 +111,11 @@ function recentForm(player, n = 5) {
 // 每位玩家的累積數據（只計有逐場數據的比賽）
 function playerTotals() {
   const t = {};
-  PLAYERS.forEach(p => t[p] = { h: 0, hr: 0, so: 0, runs: 0, games: 0, er: 0, outs: 0 });
+  PLAYERS.forEach(p => t[p] = { h: 0, ab: 0, hr: 0, rbi: 0, so: 0, runs: 0, games: 0, er: 0, outs: 0 });
   DATA.games.forEach(g => g.sides.forEach(s => {
     const x = t[s.player]; if (!x) return;
     x.games++; x.runs += s.runs;
-    s.batting.forEach(b => { x.h += b.h || 0; x.hr += b.hr || 0; });
+    s.batting.forEach(b => { x.h += b.h || 0; x.ab += b.ab || 0; x.hr += b.hr || 0; x.rbi += b.rbi || 0; });
     s.pitching.forEach(p => { x.so += p.so || 0; x.er += p.er || 0; x.outs += ipToOuts(p.ip); });
   }));
   return t;
@@ -570,7 +579,7 @@ function lbBlocks(statDefs) {
       .sort((a, b) => st.lowerBetter ? a.v - b.v : b.v - a.v);
     if (!ranked.length) return '';
 
-    const fmt = (v) => (st.dp != null ? v.toFixed(st.dp) : v) + (st.suffix || '');
+    const fmt = (v) => st.fmt ? st.fmt(v) : (st.dp != null ? v.toFixed(st.dp) : v) + (st.suffix || '');
     const bestV = ranked[0].v;
     // 長條：最佳者滿格，其他人相對比例（越低越好的用倒數比）
     const pct = (v) => {
@@ -595,22 +604,33 @@ function lbBlocks(statDefs) {
   }).join('');
 }
 
+// 一組數據（累積／場均）＝小標題 + 若干排行區塊
+function lbGroup(title, statDefs) {
+  const body = lbBlocks(statDefs);
+  return body ? `<div class="lb-group"><div class="lb-group-hd">${title}</div>${body}</div>` : '';
+}
+
 function compareCard() {
   const t = playerTotals();
-  const eraNum = (p) => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null;
-  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : null;
+  const per = (k) => (p) => t[p].games ? t[p][k] / t[p].games : null;
 
-  const stats = [
-    { lab: '累積安打', val: p => t[p].h },
-    { lab: '累積全壘打', val: p => t[p].hr },
-    { lab: '累積三振（投手）', val: p => t[p].so },
-    { lab: '平均得分', val: avgRun, dp: 1 },
-    { lab: '團隊 ERA', val: eraNum, dp: 2, lowerBetter: true }
+  const cumulative = [
+    { lab: '安打', val: p => t[p].h },
+    { lab: '全壘打', val: p => t[p].hr },
+    { lab: '打點', val: p => t[p].rbi },
+    { lab: '三振（投手）', val: p => t[p].so },
+  ];
+  const perGame = [
+    { lab: '打擊率', val: p => t[p].ab ? t[p].h / t[p].ab : null, fmt: v => v.toFixed(3).replace(/^0/, '') },
+    { lab: '場均得分', val: per('runs'), dp: 1 },
+    { lab: '場均全壘打', val: per('hr'), dp: 1 },
+    { lab: '團隊 ERA', val: p => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null, dp: 2, lowerBetter: true },
   ];
 
   return `<div class="card compare">
       <div class="cmp-title">數據對比</div>
-      ${lbBlocks(stats)}
+      ${lbGroup('累積數據', cumulative)}
+      ${lbGroup('場均數據', perGame)}
     </div>`;
 }
 
@@ -636,19 +656,25 @@ function nbaCompareCard() {
   const per = (k) => (p) => t[p].games ? t[p][k] / t[p].games : null;
   const pctOf = (m, a) => (p) => t[p][a] > 0 ? t[p][m] / t[p][a] * 100 : null;
 
-  const stats = [
-    { lab: '平均得分', val: per('pts'), dp: 1 },
+  const cumulative = [
+    { lab: '得分', val: p => t[p].pts },
+    { lab: '助攻', val: p => t[p].ast },
+    { lab: '籃板', val: p => t[p].reb },
+    { lab: '抄截', val: p => t[p].stl },
+  ];
+  const perGame = [
     { lab: '投籃命中率', val: pctOf('fgm', 'fga'), dp: 1, suffix: '%' },
     { lab: '三分命中率', val: pctOf('tpm', 'tpa'), dp: 1, suffix: '%' },
+    { lab: '場均得分', val: per('pts'), dp: 1 },
     { lab: '場均助攻', val: per('ast'), dp: 1 },
     { lab: '場均籃板', val: per('reb'), dp: 1 },
-    { lab: '場均抄截', val: per('stl'), dp: 1 },
     { lab: '場均失誤', val: per('to'), dp: 1, lowerBetter: true },
   ];
 
   return `<div class="card compare">
       <div class="cmp-title">數據對比</div>
-      ${lbBlocks(stats)}
+      ${lbGroup('累積數據', cumulative)}
+      ${lbGroup('場均數據', perGame)}
     </div>`;
 }
 
@@ -841,39 +867,68 @@ function gameCard(g) {
     </div>`;
 }
 
-let gamesFilter = null; // null = 全部，或 ['Scott','Alvin'] 等
+let gamesQuery = '';   // 對戰頁搜尋字串（玩家、隊伍、日期都能搜；多個關鍵字＝同時符合）
+
+// 把查詢拆成關鍵字，忽略「vs」「對戰」這類連接詞
+const queryTokens = (q) => q.toLowerCase()
+  .split(/[\s,、/／]+/)
+  .filter(t => t && !['vs', 'v', '對', '對戰', '打'].includes(t));
+
+function gameMatches(g, tokens) {
+  const hay = [
+    ...g.sides.map(s => s.player),
+    ...g.sides.map(s => s.team),
+    ...g.sides.map(s => s.teamFull || ''),
+    g.date,
+    g.winner,
+  ].join(' ').toLowerCase();
+  return tokens.every(t => hay.includes(t));
+}
+
+function filteredGames() {
+  const tokens = queryTokens(gamesQuery);
+  return tokens.length ? DATA.games.filter(g => gameMatches(g, tokens)) : DATA.games;
+}
+
+// 只有列表那塊，搜尋時單獨重繪（不動輸入框，才不會打字打到一半失焦）
+function gamesListHtml() {
+  const list = filteredGames();
+  if (!list.length) {
+    return `<div class="empty">找不到符合「${esc(gamesQuery)}」的對戰<br><span style="font-size:13px">試試玩家名字、隊伍名，或兩個名字一起搜</span></div>`;
+  }
+  return `<div class="section-title">對戰（${list.length} 場${gamesQuery.trim() ? ` · 共 ${DATA.games.length} 場` : ''}）</div>`
+    + list.map(gameCard).join('');
+}
 
 function viewGames() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄。</div>`;
 
-  // 找出實際存在的對戰組合（動態，依 PLAYERS 順序排）
-  const seen = new Map();
-  DATA.games.forEach(g => {
-    if (g.sides.length !== 2) return;
-    const [a, b] = [...g.sides.map(s => s.player)].sort((x, y) => PLAYERS.indexOf(x) - PLAYERS.indexOf(y));
-    seen.set(a + '|' + b, [a, b]);
-  });
-  const pairs = [...seen.values()].sort((p1, p2) =>
-    PLAYERS.indexOf(p1[0]) - PLAYERS.indexOf(p2[0]) || PLAYERS.indexOf(p1[1]) - PLAYERS.indexOf(p2[1]));
-
-  const filtered = gamesFilter
-    ? DATA.games.filter(g => {
-        const ps = g.sides.map(s => s.player);
-        return ps.includes(gamesFilter[0]) && ps.includes(gamesFilter[1]);
-      })
-    : DATA.games;
-
-  const chips = `<div class="filter-chips">
-    <button class="chip${!gamesFilter ? ' active' : ''}" onclick="setGamesFilter(null)">全部</button>
-    ${pairs.map(([a, b]) => {
-      const active = gamesFilter && gamesFilter[0] === a && gamesFilter[1] === b;
-      return `<button class="chip${active ? ' active' : ''}" onclick="setGamesFilter(['${a}','${b}'])">${a} vs ${b}</button>`;
-    }).join('')}
-  </div>`;
-
-  return `${chips}<div class="section-title">對戰（${filtered.length} 場）</div>${filtered.map(gameCard).join('')}`;
+  const names = PLAYERS.slice(0, 2).join(' ') || '玩家';
+  return `
+    <div class="search-box">
+      <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="games-search" inputmode="search" autocomplete="off" autocorrect="off"
+             aria-label="搜尋對戰" placeholder="搜尋玩家或隊伍，例：${esc(names)}"
+             value="${esc(gamesQuery)}" oninput="onGamesSearch(this.value)">
+      <button type="button" class="search-clear${gamesQuery ? '' : ' hidden'}" id="games-clear"
+              aria-label="清除搜尋" onclick="clearGamesSearch()">✕</button>
+    </div>
+    <div id="games-list">${gamesListHtml()}</div>`;
 }
-function setGamesFilter(f) { gamesFilter = f; render(); }
+
+function onGamesSearch(v) {
+  gamesQuery = v;
+  document.getElementById('games-list').innerHTML = gamesListHtml();
+  document.getElementById('games-clear').classList.toggle('hidden', !v);
+}
+
+function clearGamesSearch() {
+  gamesQuery = '';
+  const input = document.getElementById('games-search');
+  if (input) { input.value = ''; input.focus(); }
+  document.getElementById('games-list').innerHTML = gamesListHtml();
+  document.getElementById('games-clear').classList.add('hidden');
+}
 
 function viewGame(id) {
   const g = (DATA.allGames || DATA.games).find(x => x.id === id);
@@ -1158,14 +1213,8 @@ function render() {
   else if (parts[0] === 'players') { html = viewPlayers(); route = 'players'; }
   else { html = viewHome(); route = 'home'; }
 
-  // 運動切換列（單場詳情頁不顯示）
-  const isDetail = parts[0] === 'game' && parts[1];
-  const sportToggle = isDetail ? '' : `<div class="toggle sport-toggle">
-      <button class="${SPORT === 'mlb' ? 'active' : ''}" onclick="setSport('mlb')" title="MLB The Show" aria-label="切換到棒球 MLB The Show">⚾</button>
-      <button class="${SPORT === 'nba2k' ? 'active' : ''}" onclick="setSport('nba2k')" title="NBA 2K" aria-label="切換到籃球 NBA 2K">🏀</button>
-    </div>`;
-
-  app().innerHTML = sportToggle + html;
+  app().innerHTML = html;
+  syncSportSeg();
   document.querySelectorAll('nav a[data-route]').forEach(a => a.classList.toggle('active', a.dataset.route === route));
   window.scrollTo(0, 0);
 }

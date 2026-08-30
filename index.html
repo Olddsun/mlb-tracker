@@ -19,10 +19,12 @@
 <body>
   <header class="site">
     <div class="wrap site-inner">
-      <a class="brand" href="#/">
-        <img class="brand-logo" src="assets/icon-192.png" alt="E-Sport League" />
-        <span class="txt">E-Sport League</span>
-      </a>
+      <div class="sport-seg" role="tablist" aria-label="選擇運動">
+        <button type="button" role="tab" id="seg-mlb" aria-selected="true"
+                aria-label="切換到棒球 MLB The Show" title="MLB The Show" onclick="setSport('mlb')">⚾</button>
+        <button type="button" role="tab" id="seg-nba2k" aria-selected="false"
+                aria-label="切換到籃球 NBA 2K" title="NBA 2K" onclick="setSport('nba2k')">🏀</button>
+      </div>
       <nav class="tabs top">
         <a href="#/" data-route="home">總覽</a>
         <a href="#/games" data-route="games">對戰列表</a>

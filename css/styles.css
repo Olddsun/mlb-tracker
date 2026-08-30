@@ -57,8 +57,6 @@ header.site {
 .player-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .player-link.missing { cursor: default; border-bottom: none; }
 .player-link.missing:hover { color: inherit; }
-.brand { display: flex; align-items: center; gap: 9px; font-family: var(--condensed); font-weight: 700; font-size: 19px; letter-spacing: 1px; text-transform: uppercase; }
-.brand .brand-logo { width: 30px; height: 30px; border-radius: 8px; flex: none; display: block; }
 
 /* top nav: 手機隱藏，桌面顯示 */
 nav.tabs.top { display: none; }
@@ -160,6 +158,11 @@ main.wrap { padding-top: 28px; }
 .lb-val { font-family: var(--condensed); font-size: 17px; font-weight: 700; text-align: right; color: var(--muted); letter-spacing: .5px; }
 .lb-row.lead .lb-name { font-weight: 800; }
 .lb-row.lead .lb-val { color: var(--text); }
+.lb-group + .lb-group { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--border); }
+.lb-group-hd {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--accent); margin-bottom: 15px;
+}
 .h2h-vs { font-size: clamp(15px, 4vw, 22px); font-weight: 700; color: var(--muted); flex: none; }
 .h2h-sub { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 
@@ -348,14 +351,27 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
 }
 .toggle button.active { background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(79,142,247,0.4); }
 
-/* ---------- 運動切換 & NBA 2K ---------- */
-.sport-toggle { margin-bottom: 18px; }
-/* emoji 當圖示：正方形按鈕、字級放大，未選取的降透明度而不是變灰（emoji 本身有顏色） */
-.sport-toggle button {
-  font-size: 24px; line-height: 1; padding: 0; width: 60px; min-height: 44px;
-  opacity: .45; filter: grayscale(0.8); transition: opacity .18s, filter .18s, background .18s;
+/* ---------- 運動切換（頂列 segmented control）& NBA 2K ---------- */
+.sport-seg {
+  display: inline-flex; gap: 2px; flex: none;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 11px; padding: 3px;
 }
-.sport-toggle button.active { opacity: 1; filter: none; }
+/* emoji 當圖示：未選取的降透明＋去彩度（emoji 本身有顏色，不能只靠字色區分） */
+.sport-seg button {
+  width: 50px; height: 40px; border: none; background: none; border-radius: 8px;
+  font-size: 19px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: .4; filter: grayscale(.85);
+  transition: opacity .18s, filter .18s, background .18s;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.sport-seg button:hover { opacity: .7; }
+.sport-seg button[aria-selected="true"] {
+  background: var(--surface); opacity: 1; filter: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+}
+.sport-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .nba-detail { padding: 6px 16px 10px; margin-top: 12px; box-shadow: var(--shadow); }
 .nba-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nba-tbl th { color: var(--text); font-weight: 700; font-size: 14px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
@@ -368,17 +384,31 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
 .nba-tbl td.worse { color: var(--muted); }
 .scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 2px 0; display: flex; align-items: center; gap: 5px; }
 
-/* ---------- 對戰篩選 chips ---------- */
-.filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-.chip {
-  background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 20px; padding: 7px 16px;
-  font-size: 13px; font-weight: 500; color: var(--muted);
-  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
-  touch-action: manipulation;
+/* ---------- 對戰搜尋 ---------- */
+.search-box { position: relative; margin-bottom: 4px; }
+.search-box .search-ico {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  width: 17px; height: 17px; color: var(--muted); pointer-events: none;
 }
-.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-.chip:active { opacity: .8; }
+.search-box input {
+  width: 100%; min-height: 46px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font-family: inherit; font-size: 16px;   /* 16px 才不會讓 iOS 自動放大 */
+  padding: 12px 44px 12px 40px; outline: none;
+  transition: border-color .18s;
+  -webkit-appearance: none; appearance: none;
+}
+.search-box input:focus { border-color: var(--accent); }
+.search-box input::placeholder { color: var(--muted); }
+.search-box input::-webkit-search-cancel-button { display: none; }   /* 用自訂的清除鈕，避免兩顆 */
+.search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px; border: none; background: none; border-radius: 50%;
+  color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+}
+.search-clear:hover { color: var(--text); background: var(--surface-2); }
+.search-clear.hidden { display: none; }
 
 /* ---------- 玩家折疊區塊 ---------- */
 .player-section { margin-bottom: 10px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
@@ -402,8 +432,8 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
   body { padding-bottom: 40px; }
   .wrap { padding: 0 20px; }
   .site-inner { height: 62px; gap: 18px; }
-  .brand { font-size: 18px; }
 
+  /* 桌機底部 tab 是隱藏的，頂列必須留頁面導覽，否則沒得切頁 */
   nav.tabs.top { display: flex; gap: 4px; margin-left: auto; }
   nav.tabs.top a {
     padding: 9px 15px; border-radius: 9px; font-size: 14px; font-weight: 500;
