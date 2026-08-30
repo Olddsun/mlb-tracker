@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESL 優化執行清單</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #151b27;
+      --panel2: #1e2634;
+      --line: #2b3547;
+      --text: #edf3fa;
+      --muted: #9aa8ba;
+      --accent: #4f8ef7;
+      --green: #34d399;
+      --gold: #f5a524;
+      --red: #f87171;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, rgba(79, 142, 247, .12), transparent 280px), var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.68;
+    }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+    header { padding: 28px 0 22px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--green); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 8px 0 14px; max-width: 900px; font-size: clamp(36px, 7vw, 72px); line-height: .96; letter-spacing: 0; }
+    .lede { margin: 0; max-width: 860px; color: var(--muted); font-size: clamp(17px, 2vw, 21px); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .pill {
+      display: inline-flex; align-items: center; min-height: 32px; padding: 5px 10px;
+      border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+      background: rgba(21, 27, 39, .72); font-size: 13px; white-space: nowrap;
+    }
+    section { margin-top: 28px; }
+    h2 { margin: 0 0 12px; font-size: 22px; letter-spacing: 0; }
+    h3 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+    .card {
+      grid-column: span 12; background: rgba(21, 27, 39, .94); border: 1px solid var(--line);
+      border-radius: 8px; padding: 18px; box-shadow: 0 16px 50px rgba(0,0,0,.22);
+    }
+    @media (min-width: 760px) {
+      .span-4 { grid-column: span 4; }
+      .span-5 { grid-column: span 5; }
+      .span-6 { grid-column: span 6; }
+      .span-7 { grid-column: span 7; }
+      .span-8 { grid-column: span 8; }
+    }
+    .callout { border-left: 4px solid var(--accent); background: rgba(79,142,247,.1); }
+    .success { border-left: 4px solid var(--green); background: rgba(52,211,153,.09); }
+    .warning { border-left: 4px solid var(--gold); background: rgba(245,165,36,.09); }
+    .danger { border-left: 4px solid var(--red); background: rgba(248,113,113,.08); }
+    ul, ol { margin: 0; padding-left: 20px; }
+    li + li { margin-top: 6px; }
+    code {
+      font-family: var(--mono); font-size: .92em; color: #d5e5ff; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08); border-radius: 5px; padding: 1px 5px;
+    }
+    pre {
+      margin: 12px 0 0; padding: 14px; overflow-x: auto; background: #08111f; border: 1px solid var(--line);
+      border-radius: 8px; color: #d9e8ff; font-family: var(--mono); font-size: 12px; line-height: 1.55;
+    }
+    .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    .table th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .phase { display: inline-flex; min-height: 26px; padding: 2px 8px; align-items: center; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(79,142,247,.14); color: #b9d1ff; }
+    .footer { margin-top: 40px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">ESL v1 Execution Checklist</div>
+      <h1>ESL 優化執行清單</h1>
+      <p class="lede">
+        這份文件是給 Claude Code 執行用的最新版規格：主站搬到 Cloudflare Pages，正式資料搬到 Supabase DB，
+        三位玩家可在網站上直接提交戰績。第一版不做可編輯確認畫面，玩家只要填「誰用哪一隊」並上傳 5 張任意順序截圖，
+        AI 會先判斷每張圖的角色，再解析資料；硬性驗證通過後直接更新正式戰績。
+      </p>
+      <div class="meta">
+        <span class="pill">Cloudflare Pages + Pages Functions</span>
+        <span class="pill">Supabase PostgreSQL + Storage</span>
+        <span class="pill">Claude Vision</span>
+        <span class="pill">AI 單次 call 完成分類 + 解析</span>
+        <span class="pill">無可編輯確認畫面</span>
+        <span class="pill">5 張截圖任意順序</span>
+        <span class="pill">速度優先</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card span-8 callout">
+        <h2>最終產品決策</h2>
+        <ul>
+          <li>公開戰績網站搬到 <code>Cloudflare Pages</code>。</li>
+          <li>正式資料搬到 <code>Supabase PostgreSQL</code>，不再以 <code>data/games.json</code> 作為長期資料庫。</li>
+          <li>截圖存在 <code>Supabase Storage</code>，前端用 signed upload URL 直傳，不經過 Function body。</li>
+          <li>玩家 token 第一版可等於名字：<code>Scott</code>、<code>Alvin</code>、<code>Vincent</code>。</li>
+          <li>玩家不需要排序截圖，只需要一次上傳 5 張 box score 圖片。</li>
+          <li>AI 必須在同一次 Vision call 內完成 image role classification 與 box score extraction。</li>
+          <li>AI 解析後不顯示可編輯確認畫面；硬性驗證通過就直接寫入 DB。</li>
+          <li><code>needsReview</code> 與重複偵測只做提示與 log，不阻擋提交。</li>
+        </ul>
+      </article>
+      <article class="card span-4 warning">
+        <h2>第一版刻意不做</h2>
+        <ul>
+          <li>不做會員系統。</li>
+          <li>不做 Scott 審核流程。</li>
+          <li>不做所有欄位可編輯的確認頁。</li>
+          <li>不做多聯盟。</li>
+          <li>不做 NBA 2K schema。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-7">
+        <h2>資料欄位補強說明</h2>
+        <table class="table">
+          <thead><tr><th>欄位 / 規則</th><th>意思</th><th>為什麼需要</th></tr></thead>
+          <tbody>
+            <tr><td><code>NOT NULL</code></td><td>這個欄位不能空白。</td><td>避免一場比賽缺少比分、玩家、日期，導致戰績算錯。</td></tr>
+            <tr><td><code>CHECK</code></td><td>限制欄位只能是某些值。</td><td>例如 <code>home_away</code> 只能是 <code>home</code> 或 <code>away</code>。</td></tr>
+            <tr><td><code>UNIQUE</code></td><td>不能重複。</td><td>例如 <code>legacy_id</code> 避免同一場舊資料被遷移兩次。</td></tr>
+            <tr><td><code>SV / HLD</code></td><td>投手決定欄位的救援成功與中繼成功。</td><td>目前資料已有 <code>SV</code>、<code>HLD</code>，不能只支援 <code>W</code>、<code>L</code>。</td></tr>
+            <tr><td><code>needs_review</code></td><td>AI 覺得某些欄位不確定。</td><td>第一版不阻擋提交，只用來事後查錯。</td></tr>
+            <tr><td><code>uncertainties</code></td><td>AI 不確定的具體欄位清單。</td><td>如果之後要修資料，可以知道是哪裡可能有問題。</td></tr>
+            <tr><td><code>duplicate_candidates</code></td><td>可能重複的比賽清單。</td><td>不擋提交，但事後可查是否同一場被送兩次。</td></tr>
+            <tr><td><code>request_ip</code></td><td>提交者的 IP。</td><td>token 很簡單時，至少保留基本稽核資訊。</td></tr>
+            <tr><td><code>user_agent</code></td><td>提交者瀏覽器 / 裝置資訊。</td><td>方便追蹤問題，例如某台手機壓圖或上傳失敗。</td></tr>
+            <tr><td><code>raw_user_input</code></td><td>玩家原始輸入，例如「Scott 洋基 / Alvin 道奇」。</td><td>保留 AI 解析前的原始上下文。</td></tr>
+            <tr><td><code>source</code></td><td>資料來源，例如 <code>manual_migration</code>、<code>ai_submission</code>。</td><td>分辨舊資料遷移與新上傳資料。</td></tr>
+          </tbody>
+        </table>
+      </article>
+      <article class="card span-5 success">
+        <h2>重點原則</h2>
+        <p>
+          這些欄位不是為了把流程變複雜，而是讓第一版即使「快速直接寫入」，也能保留足夠紀錄，之後真的錯了可以查得到、修得回來。
+        </p>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>修正版 Supabase Schema 要點</h2>
+        <pre><code>-- games
+legacy_id text unique,
+source text not null default 'ai_submission'
+  check (source in ('manual_migration', 'ai_submission')),
+
+-- game_sides
+home_away text not null check (home_away in ('home', 'away')),
+runs integer not null default 0 check (runs >= 0),
+hits integer not null default 0 check (hits >= 0),
+errors integer not null default 0 check (errors >= 0),
+innings jsonb not null,
+
+-- pitching_lines
+decision text check (decision is null or decision in ('W', 'L', 'SV', 'HLD', 'BS')),
+ip text not null,
+h integer not null default 0 check (h >= 0),
+r integer not null default 0 check (r >= 0),
+er integer not null default 0 check (er >= 0),
+bb integer not null default 0 check (bb >= 0),
+so integer not null default 0 check (so >= 0),
+
+-- game_notes
+note_type text not null check (note_type in ('hr', 'sb', 'error')),
+
+-- submissions
+status text not null default 'received'
+  check (status in ('received', 'uploaded', 'parsing', 'committed', 'failed')),
+needs_review boolean not null default false,
+uncertainties jsonb not null default '[]'::jsonb,
+duplicate_candidates jsonb not null default '[]'::jsonb,
+raw_user_input text,
+request_ip text,
+user_agent text</code></pre>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2><span class="phase">Phase 1</span> Supabase 資料層</h2>
+        <ol>
+          <li>建立 <code>players</code>、<code>teams</code>、<code>games</code>、<code>game_sides</code>、<code>batting_lines</code>、<code>pitching_lines</code>、<code>game_notes</code>、<code>submissions</code>。</li>
+          <li>補上 <code>NOT NULL</code>、<code>CHECK</code>、<code>UNIQUE</code> 約束。</li>
+          <li>建立 Storage bucket：<code>box-score-submissions</code>。</li>
+          <li>先 seed 三位玩家與 MLB team mapping。</li>
+        </ol>
+      </article>
+      <article class="card span-6">
+        <h2><span class="phase">Phase 2</span> 舊資料遷移</h2>
+        <ol>
+          <li>寫 <code>scripts/migrate-games-to-supabase.js</code>。</li>
+          <li>將現有 8 場從 <code>data/games.json</code> 匯入 Supabase。</li>
+          <li>使用 <code>legacy_id</code> 防止重複插入。</li>
+          <li>遷移資料的 <code>source</code> 設為 <code>manual_migration</code>。</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2><span class="phase">Phase 3</span> API 與前端資料來源</h2>
+        <ol>
+          <li>新增 <code>functions/api/games.js</code>，從 Supabase 組回接近原本 <code>games.json</code> 的資料形狀。</li>
+          <li><code>js/app.js</code> 只把 <code>fetch('data/games.json')</code> 換成 <code>fetch('/api/games')</code>。</li>
+          <li>首頁、對戰列表、隊伍戰績、球員數據、單場詳情必須與舊版一致。</li>
+        </ol>
+      </article>
+      <article class="card span-6">
+        <h2><span class="phase">Phase 4</span> Cloudflare Pages</h2>
+        <ol>
+          <li>接 GitHub repo 到 Cloudflare Pages。</li>
+          <li>設定 Cloudflare secrets：<code>SUPABASE_SERVICE_ROLE_KEY</code>、<code>ANTHROPIC_API_KEY</code>、<code>PLAYER_TOKENS</code>。</li>
+          <li>在 preview 環境驗證 DB 讀取版。</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2><span class="phase">Phase 5</span> 截圖提交流程</h2>
+        <ol>
+          <li>新增主站「提交戰績紀錄」按鈕。</li>
+          <li>提交頁欄位：提交者、token、玩家隊伍對應、5 張任意順序截圖。</li>
+          <li><code>/api/create-upload-session</code>：驗 token、建 submission、回傳 signed upload URLs。</li>
+          <li>前端壓縮圖片到 max width 1600px、JPEG 0.82，直傳 Supabase Storage。</li>
+          <li><code>/api/process-submission</code>：讀圖、呼叫 Claude Vision 一次，在同一次 response 取得 <code>image_roles</code> 與完整 game data，再驗證、寫入 DB。</li>
+        </ol>
+      </article>
+      <article class="card span-6">
+        <h2><span class="phase">Phase 6</span> 驗證與警示</h2>
+        <ol>
+          <li>硬性驗證：winner、innings、batting 合計、pitching 失分、IP 格式。</li>
+          <li><code>needsReview</code>：只記錄，不阻擋。</li>
+          <li>duplicate detection：只記錄，不阻擋。</li>
+          <li>成功頁顯示比分摘要、winner、提交者、warning 狀態。</li>
+          <li>驗證失敗頁顯示具體錯誤、submission ID，並說明截圖已保存或未保存。</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-7 warning">
+        <h2>AI / Storage 實作注意</h2>
+        <ul>
+          <li>圖片直傳 Supabase Storage，不要塞進 Cloudflare Function request body。</li>
+          <li>AI 解析時，Function 用 service role 讀取 private bucket 圖片，或產生短效 signed read URL 傳給 Claude Vision。</li>
+          <li>不要讓前端拿到 service role key。</li>
+          <li>Claude Vision prompt 要明確說：5 張截圖是任意順序，不可假設第 1 張就是總比分。</li>
+          <li>AI 必須在單次 call 中同時輸出 <code>image_roles</code> 與完整 <code>game</code>，不可先分類 call 一次、再解析 call 一次。</li>
+          <li>若任何圖片無法辨識為必要 box score 類型，直接回傳 fatal error，submission 設為 <code>failed</code>，不得寫入正式 DB。</li>
+          <li>玩家隊伍對應是事實，不可改；看不清楚就標記 <code>needsReview</code>，不要編造。</li>
+        </ul>
+      </article>
+      <article class="card span-5 danger">
+        <h2>驗收標準</h2>
+        <ul>
+          <li>現有 8 場資料完整顯示。</li>
+          <li>三位玩家任兩人可提交。</li>
+          <li>5 張截圖任意順序仍可成功解析。</li>
+          <li>AI 單次回傳 <code>image_roles</code> 與 <code>game</code>，並能對應到正確玩家與隊伍。</li>
+          <li>圖片完全無法辨識時，submission 變成 <code>failed</code>，前端顯示第幾張圖片有問題。</li>
+          <li>token 錯誤不可建立 upload session。</li>
+          <li>截圖不經過 Function body。</li>
+          <li>硬性驗證失敗不寫入正式資料。</li>
+          <li>needsReview / duplicate 只做紀錄與提示。</li>
+          <li>API key 與 service role key 不出現在前端。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>AI 輸出格式重點</h2>
+        <p>
+          Structured Output schema 必須包含 <code>image_roles</code>。後端可用它做 debug 與錯誤追蹤，但正式入庫仍以解析後的 game data 與硬性驗證為準。
+        </p>
+        <pre><code>{
+  "image_roles": [
+    {
+      "image_id": "img_1",
+      "role": "line_score",
+      "team": null,
+      "confidence": 0.98
+    },
+    {
+      "image_id": "img_2",
+      "role": "batting",
+      "team": "Yankees",
+      "player": "scott",
+      "confidence": 0.95
+    },
+    {
+      "image_id": "img_3",
+      "role": "pitching",
+      "team": "Dodgers",
+      "player": "alvin",
+      "confidence": 0.93
+    }
+  ],
+  "game": {
+    "date": "2026-06-26",
+    "winner": "scott",
+    "sides": [
+      {
+        "player": "Scott",
+        "team": "Yankees",
+        "homeAway": "home",
+        "runs": 5,
+        "hits": 8,
+        "errors": 0,
+        "innings": ["0","2","0","1","0","0","2","0","X"],
+        "batting": [],
+        "pitching": []
+      }
+    ],
+    "notes": {}
+  },
+  "needsReview": false,
+  "uncertainties": [],
+  "fatalError": false,
+  "errorCode": null,
+  "errorMessage": null
+}</code></pre>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6 danger">
+        <h2>圖片無法識別時的出口</h2>
+        <p>如果 5 張截圖中任何一張完全無法辨識為 box score，不要硬解析。</p>
+        <pre><code>{
+  "image_roles": [
+    {
+      "image_id": "img_3",
+      "role": "unknown",
+      "confidence": 0.12,
+      "reason": "圖片不是 box score，或畫面太暗無法辨識"
+    }
+  ],
+  "game": null,
+  "needsReview": true,
+  "fatalError": true,
+  "errorCode": "unrecognized_image",
+  "errorMessage": "第 3 張截圖無法辨識為 box score"
+}</code></pre>
+        <ul>
+          <li>後端收到 <code>fatalError = true</code> 時，設定 <code>status = failed</code>。</li>
+          <li>不寫入正式比賽資料。</li>
+          <li>前端顯示是哪一張圖片有問題。</li>
+        </ul>
+      </article>
+
+      <article class="card span-6 warning">
+        <h2>驗證失敗 UX</h2>
+        <p>AI 成功解析，但硬性驗證沒過，也不能黑盒失敗。</p>
+        <pre><code>提交失敗，尚未寫入戰績
+
+原因：
+投手失分合計 4，但對手總得分是 5。
+
+截圖已保存。
+Submission ID: 6c1a...
+
+你可以：
+1. 重新上傳截圖
+2. 把 Submission ID 傳給 Scott 處理</code></pre>
+        <ul>
+          <li><code>status = failed</code></li>
+          <li><code>error_code = validation_failed</code></li>
+          <li>保留 <code>image_paths</code>、<code>parsed_game_json</code>、<code>error_message</code>。</li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">
+      給 Claude Code：請先完成資料層與遷移，再做 Cloudflare API，最後才做截圖提交。第一版速度優先，不做可編輯確認頁。
+    </p>
+  </main>
+</body>
+</html>

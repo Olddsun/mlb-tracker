@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESL 戰績網站升級技術規格</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #151b27;
+      --panel-2: #1e2634;
+      --line: #2b3547;
+      --text: #edf3fa;
+      --muted: #9aa8ba;
+      --accent: #4f8ef7;
+      --green: #34d399;
+      --gold: #f5a524;
+      --red: #f87171;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, rgba(79, 142, 247, .12), transparent 280px), var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.68;
+    }
+    a { color: var(--accent); }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+    header { padding: 28px 0 22px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--green); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 8px 0 14px; max-width: 880px; font-size: clamp(36px, 7vw, 72px); line-height: .96; letter-spacing: 0; }
+    .lede { margin: 0; max-width: 840px; color: var(--muted); font-size: clamp(17px, 2vw, 21px); }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(21, 27, 39, .72);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    section { margin-top: 28px; }
+    h2 { margin: 0 0 12px; font-size: 22px; letter-spacing: 0; }
+    h3 { margin: 0 0 8px; font-size: 16px; }
+    p { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+    .card {
+      grid-column: span 12;
+      background: rgba(21, 27, 39, .94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, .22);
+    }
+    @media (min-width: 760px) {
+      .span-3 { grid-column: span 3; }
+      .span-4 { grid-column: span 4; }
+      .span-5 { grid-column: span 5; }
+      .span-6 { grid-column: span 6; }
+      .span-7 { grid-column: span 7; }
+      .span-8 { grid-column: span 8; }
+      .span-9 { grid-column: span 9; }
+    }
+    .callout { border-left: 4px solid var(--accent); background: rgba(79, 142, 247, .1); }
+    .success { border-left: 4px solid var(--green); background: rgba(52, 211, 153, .09); }
+    .warning { border-left: 4px solid var(--gold); background: rgba(245, 165, 36, .09); }
+    .danger { border-left: 4px solid var(--red); background: rgba(248, 113, 113, .08); }
+    ul, ol { margin: 0; padding-left: 20px; }
+    li + li { margin-top: 6px; }
+    code {
+      font-family: var(--mono);
+      font-size: .92em;
+      color: #d5e5ff;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+    pre {
+      margin: 12px 0 0;
+      padding: 14px;
+      overflow-x: auto;
+      background: #08111f;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: #d9e8ff;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table th, .table td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    .table th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .flow { display: grid; gap: 10px; }
+    .step { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; }
+    .num {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: white;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .diagram { display: grid; gap: 10px; font-family: var(--mono); font-size: 13px; color: #cfe0f7; }
+    .node { padding: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; }
+    .arrow { color: var(--muted); padding-left: 12px; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(79, 142, 247, .14);
+      color: #b9d1ff;
+    }
+    .footer { margin-top: 40px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 18px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">給 Claude Code 與 Codex 交叉驗證</div>
+      <h1>ESL 戰績網站升級技術規格</h1>
+      <p class="lede">
+        最新決策：一次把架構整理乾淨。主站搬到 Cloudflare Pages，正式資料搬到 Supabase DB，
+        網站內直接提供「提交戰績紀錄」按鈕；Scott、Alvin、Vincent 輸入自己的簡單 token 後即可上傳 5 張 box score 截圖。
+        AI 解析與驗證通過後直接寫入正式資料，讓玩家打完後能立刻看到更新後戰績。
+      </p>
+      <div class="meta">
+        <span class="pill">主站：Cloudflare Pages</span>
+        <span class="pill">API：Cloudflare Pages Functions</span>
+        <span class="pill">正式資料：Supabase PostgreSQL</span>
+        <span class="pill">截圖：Supabase Storage</span>
+        <span class="pill">AI：Vision + Structured JSON</span>
+        <span class="pill">流程：上傳後自動更新</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card span-8 callout">
+        <h2>核心方向</h2>
+        <p>
+          不再保留 GitHub Pages 當主站，也不再讓 <code>data/games.json</code> 當長期正式資料來源。
+          這次改版的目標是把 ESL 從「靜態資料展示頁」升級成「可提交、可查證、可擴充的聯盟紀錄系統」。
+        </p>
+        <p>
+          使用者體驗要保持極簡：選自己是誰、輸入 token、填誰用哪隊、上傳 5 張截圖。剩下由 AI 解析與後端驗證處理。
+        </p>
+      </article>
+
+      <article class="card span-4 success">
+        <h2>第一版不用做</h2>
+        <ul>
+          <li>不用會員系統。</li>
+          <li>不用 Scott 審核流程。</li>
+          <li>不用 App Store。</li>
+          <li>不用多聯盟。</li>
+          <li>不用 NBA 2K schema。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12 warning">
+        <h2>針對 Claude 回饋的澄清</h2>
+        <ul>
+          <li><strong>確認步驟改成非阻擋：</strong>第一版不做上傳者確認，也不做 Scott 審核。AI 解析與驗證通過後直接寫入正式資料。</li>
+          <li><strong><code>needsReview</code> 不阻擋：</strong>若 AI 回傳 <code>needsReview = true</code>，只記錄在 submission log 與結果提示中，不阻擋寫入。這是打好玩的聯盟，速度優先。</li>
+          <li><strong>不再用 GitHub 當資料庫：</strong>新版正式資料是 Supabase PostgreSQL。GitHub 只保留程式碼，不再用 GitHub Contents API 寫 <code>games.json</code>。</li>
+          <li><strong>截圖不要塞進 Function body：</strong>第一版應採 Supabase signed upload URLs，前端直傳 Storage；Cloudflare Function 只處理 token、AI、驗證與 DB 寫入。</li>
+          <li><strong>重複提交偵測改成提示與紀錄：</strong>同日期、同兩位玩家、同隊伍、同比分高度相似時，記錄 duplicate warning，但第一版不阻擋提交。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2>目標架構</h2>
+        <div class="diagram">
+          <div class="node">Cloudflare Pages：公開戰績頁 + 提交頁</div>
+          <div class="arrow">↓ 同網域 API，無額外 CORS 複雜度</div>
+          <div class="node">Pages Function：<code>/api/create-upload-session</code></div>
+          <div class="arrow">↓ token 驗證，建立 submission，回傳 signed upload URLs</div>
+          <div class="node">前端直傳 5 張截圖到 Supabase Storage</div>
+          <div class="arrow">↓</div>
+          <div class="node">Pages Function：<code>/api/process-submission</code></div>
+          <div class="arrow">↓ AI 解析 + 驗證 + 重複偵測</div>
+          <div class="node">驗證通過後直接寫入正式 DB</div>
+          <div class="node">Supabase PostgreSQL：games / sides / box score lines</div>
+          <div class="arrow">↓</div>
+          <div class="node">前端從 <code>/api/games</code> 讀資料並渲染現有 UI</div>
+        </div>
+      </article>
+
+      <article class="card span-6">
+        <h2>玩家提交流程</h2>
+        <div class="flow">
+          <div class="step"><div class="num">1</div><div>玩家在主站點「提交戰績紀錄」。</div></div>
+          <div class="step"><div class="num">2</div><div>選擇提交者：<code>Scott</code>、<code>Alvin</code> 或 <code>Vincent</code>。</div></div>
+          <div class="step"><div class="num">3</div><div>輸入簡單 token。第一版 token 可暫時等於名字，例如 Alvin 輸入 <code>Alvin</code>。</div></div>
+          <div class="step"><div class="num">4</div><div>填玩家隊伍對應，例如 <code>Scott = Yankees</code>、<code>Vincent = Cubs</code>。</div></div>
+          <div class="step"><div class="num">5</div><div>系統取得 signed upload URLs，前端把 5 張截圖直傳 Supabase Storage。</div></div>
+          <div class="step"><div class="num">6</div><div>AI 解析後，後端驗證資料一致性並偵測可能重複提交。</div></div>
+          <div class="step"><div class="num">7</div><div>只要硬性驗證通過，就直接寫入正式 DB，並記錄這筆是誰上傳、是否有 AI / duplicate warning。</div></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-7 warning">
+        <h2>實作順序，避免一次爆炸</h2>
+        <p>
+          雖然目標是一次整理乾淨，但實作上要分階段交付。最重要的順序是：
+          <strong>先資料層遷移，再改前端資料來源，最後才做截圖上傳。</strong>
+        </p>
+        <ol>
+          <li>設計 Supabase schema。</li>
+          <li>把現有 <code>data/games.json</code> 的 8 場資料匯入 Supabase。</li>
+          <li>做 <code>/api/games</code>，回傳接近原本 <code>games.json</code> 的資料格式。</li>
+          <li>前端只把資料來源從 JSON 換成 API，UI 與統計先盡量不動。</li>
+          <li>驗證 DB 版首頁、隊伍、球員數據與舊版完全一致。</li>
+          <li>再做提交截圖、AI 解析、硬性驗證、寫入 DB。</li>
+          <li>最後把主站部署到 Cloudflare Pages。</li>
+        </ol>
+      </article>
+
+      <article class="card span-5 danger">
+        <h2>不要照做的舊方案</h2>
+        <ul>
+          <li>不要只建簡化版 <code>games</code> / <code>batting_lines</code> / <code>pitching_lines</code>，會漏資料。</li>
+          <li>不要任何人知道網址就能提交，至少要有 player token。</li>
+          <li>不要讓前端直接碰 Supabase service role key 或 AI API key。</li>
+          <li>不要邊搬 DB、邊改 UI、邊做 AI 上傳又邊改統計邏輯。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>Supabase Schema 草案</h2>
+        <p>
+          這份 schema 要完整保留現有 <code>games.json</code> 能呈現的資料：player of game、teamFull、line score、notes、打者位置、投手 record、HLD / SV 等 decision。
+        </p>
+        <pre><code>create table players (
+  id text primary key, -- scott | alvin | vincent
+  display_name text not null
+);
+
+create table teams (
+  id text primary key, -- yankees
+  name text not null,  -- Yankees
+  full_name text not null -- New York Yankees
+);
+
+create table games (
+  id uuid primary key default gen_random_uuid(),
+  legacy_id text unique, -- 2026-06-25-03，用於遷移與對照
+  played_at date not null,
+  sport text not null default 'mlb',
+  winner_player_id text references players(id),
+  player_of_game_name text,
+  player_of_game_team text,
+  submitted_by text references players(id),
+  submission_id uuid,
+  created_at timestamptz not null default now()
+);
+
+create table game_sides (
+  id uuid primary key default gen_random_uuid(),
+  game_id uuid references games(id) on delete cascade,
+  player_id text references players(id),
+  team_id text references teams(id),
+  team_name text not null,
+  team_full text not null,
+  home_away text not null check (home_away in ('home', 'away')),
+  runs integer not null,
+  hits integer not null,
+  errors integer not null,
+  innings jsonb not null
+);
+
+create table batting_lines (
+  id uuid primary key default gen_random_uuid(),
+  game_side_id uuid references game_sides(id) on delete cascade,
+  batting_order integer,
+  name text not null,
+  pos text,
+  ab integer not null,
+  r integer not null,
+  h integer not null,
+  rbi integer not null,
+  bb integer not null,
+  so integer not null,
+  hr integer default 0
+);
+
+create table pitching_lines (
+  id uuid primary key default gen_random_uuid(),
+  game_side_id uuid references game_sides(id) on delete cascade,
+  pitching_order integer,
+  name text not null,
+  decision text,
+  record text,
+  ip text not null,
+  h integer not null,
+  r integer not null,
+  er integer not null,
+  bb integer not null,
+  so integer not null
+);
+
+create table game_notes (
+  id uuid primary key default gen_random_uuid(),
+  game_id uuid references games(id) on delete cascade,
+  note_type text not null, -- hr | sb | error
+  player_name text not null,
+  count integer
+);
+
+create table submissions (
+  id uuid primary key default gen_random_uuid(),
+  submitted_by text references players(id),
+  player_a text not null,
+  team_a text not null,
+  player_b text not null,
+  team_b text not null,
+  image_paths jsonb not null default '[]'::jsonb,
+  parsed_game_json jsonb,
+  status text not null default 'received'
+    check (status in (
+      'received',
+      'uploaded',
+      'parsing',
+      'parsed',
+      'committed',
+      'failed'
+    )),
+  game_id uuid references games(id),
+  needs_review boolean not null default false,
+  uncertainties jsonb,
+  duplicate_candidates jsonb,
+  error_message text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);</code></pre>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2>Cloudflare 檔案結構</h2>
+        <table class="table">
+          <thead><tr><th>路徑</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td><code>functions/api/games.js</code></td><td>讀 Supabase，回傳前端需要的完整 games 結構。</td></tr>
+            <tr><td><code>functions/api/create-upload-session.js</code></td><td>驗 player token、建立 submission、回傳 Supabase signed upload URLs。</td></tr>
+            <tr><td><code>functions/api/process-submission.js</code></td><td>讀取已上傳圖片、呼叫 AI、驗證、重複偵測，通過後直接寫入正式 Supabase tables。</td></tr>
+            <tr><td><code>functions/api/submissions/[id].js</code></td><td>可選：查單筆 submission 狀態。</td></tr>
+            <tr><td><code>js/app.js</code></td><td>資料來源改成 <code>/api/games</code>，統計邏輯先保留。</td></tr>
+            <tr><td><code>submit/index.html</code></td><td>提交戰績紀錄頁。</td></tr>
+            <tr><td><code>scripts/migrate-games-to-supabase.js</code></td><td>一次性把現有 <code>data/games.json</code> 匯入 DB。</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card span-6">
+        <h2>Cloudflare 環境變數 / Secrets</h2>
+        <pre><code>SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_BUCKET=box-score-submissions
+OPENAI_API_KEY=...
+PLAYER_TOKENS={"Scott":"Scott","Alvin":"Alvin","Vincent":"Vincent"}</code></pre>
+        <ul>
+          <li>Cloudflare Pages Functions 可透過 bindings / env 讀取環境變數。</li>
+          <li>敏感值要設為 secret，不要寫進 repo。</li>
+          <li><code>PLAYER_TOKENS</code> 第一版可等於名字，但要保留未來改成真正密碼的能力。</li>
+          <li>Supabase service role key 只允許在 Cloudflare Function 端使用，用來建立 signed upload URLs 與寫正式資料表。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-7">
+        <h2>AI 解析要求</h2>
+        <p>使用 Vision 模型搭配結構化 JSON 輸出。AI 不決定提交者身份，只解析比賽內容。</p>
+        <pre><code>你是 MLB The Show box score 解析器。
+
+使用者已提供玩家與隊伍對應，這些是事實，不可更改：
+- Scott = Yankees
+- Alvin = Dodgers
+
+請從 5 張截圖判斷：
+- 誰是主場 / 客場
+- 最終比分、hits、errors
+- 每局得分
+- winner
+- player of game
+- 兩隊 batting lines
+- 兩隊 pitching lines
+- notes：HR、SB、errors
+
+輸出必須符合後端定義的 JSON Schema。
+如果欄位看不清楚，仍輸出最佳判斷，並標記 needsReview 與 uncertainties，不要編造。
+needsReview 只作為警示紀錄，不阻擋提交。</code></pre>
+      </article>
+
+      <article class="card span-5">
+        <h2>提交後驗證</h2>
+        <ul>
+          <li>winner 必須與比分一致。</li>
+          <li>innings 加總必須等於 runs。</li>
+          <li>batting hits / runs 合計必須等於隊伍總計。</li>
+          <li>pitching runs allowed 必須等於對手 runs。</li>
+          <li>投球局數必須是 <code>9.0</code>、<code>7.1</code>、<code>0.2</code> 這種棒球格式。</li>
+          <li>驗證失敗時寫入 <code>submissions.status = failed</code>，不得寫入正式比賽表。</li>
+          <li><code>needsReview = true</code> 時只記錄 <code>submissions.needs_review = true</code> 與 <code>uncertainties</code>，不阻擋正式寫入。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6 warning">
+        <h2>速度優先規則</h2>
+        <ul>
+          <li>第一版不做確認畫面、不做人工審核。</li>
+          <li>AI 解析後，只要硬性驗證通過就寫入正式資料。</li>
+          <li>成功畫面顯示：比分摘要、winner、player of game、是否有 <code>needsReview</code> 或 duplicate warning。</li>
+          <li>若玩家事後發現錯誤，再由 Scott / Codex 後續修正資料。</li>
+          <li>這個決策符合目前使用情境：朋友打好玩，打完立刻看戰績。</li>
+        </ul>
+      </article>
+
+      <article class="card span-6">
+        <h2>重複提交偵測</h2>
+        <p>寫入正式 DB 前先查相似比賽，避免同一場被送兩次。</p>
+        <ul>
+          <li>同一天。</li>
+          <li>同兩位玩家，不看順序。</li>
+          <li>同兩支隊伍，不看順序。</li>
+          <li>最終比分相同，或總分差距很小。</li>
+          <li>若命中，寫入 <code>duplicate_candidates</code> 並在成功畫面提示可能重複。</li>
+          <li>第一版不 hard block，也不要求二次確認。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-6">
+        <h2>資料遷移驗收</h2>
+        <ul>
+          <li>現有 8 場資料全部匯入 Supabase。</li>
+          <li>DB 版 <code>/api/games</code> 回傳的資料足以讓現有 UI 正常渲染。</li>
+          <li>首頁戰績、近期對戰、隊伍戰績、球員數據要與舊版一致。</li>
+          <li>每一場 detail page 的 line score、batting、pitching、notes 都不能掉資料。</li>
+          <li>遷移腳本可重跑，不能重複插入同一場 legacy game。</li>
+        </ul>
+      </article>
+
+      <article class="card span-6">
+        <h2>上線策略</h2>
+        <ol>
+          <li>先在 Cloudflare Pages preview 部署 DB 讀取版。</li>
+          <li>確認 UI 與舊 GitHub Pages 顯示一致。</li>
+          <li>再開啟提交頁與 upload / process API。</li>
+          <li>用一場測試資料驗證 signed upload、AI 解析、硬性驗證與 DB 寫入。</li>
+          <li>確認穩定後，通知三位玩家改用 Cloudflare 網址。</li>
+          <li>GitHub Pages 可短期保留備援，但不再作為主站。</li>
+        </ol>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>給 Claude Code 的交叉驗證問題</h2>
+        <ul>
+          <li>這份 schema 是否完整涵蓋目前 <code>data/games.json</code> 的欄位？有沒有遺漏 notes、record、teamFull、owner 分離？</li>
+          <li><code>/api/games</code> 應該直接回傳接近原本 JSON 的結構，還是讓前端改成吃 normalized DB rows？建議第一版回傳原本結構以降低 UI 改動。</li>
+          <li>是否同意第一版直接採 Supabase signed upload URLs，不讓 5 張截圖經過 Cloudflare Function body？</li>
+          <li>第一版 token 等於名字是否可接受？若要保留簡單體驗，至少要完整記錄 <code>submitted_by</code> 與 IP / user agent 嗎？</li>
+          <li>若 <code>needsReview = true</code> 仍直接寫入，成功頁面應如何提醒玩家最不干擾？</li>
+          <li>duplicate warning 不阻擋時，是否需要在 submissions 查詢頁明顯標示？</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card span-12">
+        <h2>參考文件</h2>
+        <ul>
+          <li><a href="https://developers.cloudflare.com/pages/functions/">Cloudflare Pages Functions</a></li>
+          <li><a href="https://developers.cloudflare.com/pages/functions/routing/">Cloudflare Pages Functions Routing</a></li>
+          <li><a href="https://developers.cloudflare.com/workers/configuration/secrets/">Cloudflare Workers Secrets</a></li>
+          <li><a href="https://supabase.com/docs/guides/storage/uploads/standard-uploads">Supabase Storage 標準上傳</a></li>
+          <li><a href="https://supabase.com/docs/reference/javascript/insert">Supabase JavaScript Insert</a></li>
+          <li><a href="https://developers.openai.com/api/docs/guides/images-vision">OpenAI Images and Vision</a></li>
+          <li><a href="https://developers.openai.com/api/docs/guides/structured-outputs">OpenAI Structured Outputs</a></li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">
+      最新版本：主站 Cloudflare Pages、API Pages Functions、正式資料 Supabase DB、截圖 Supabase Storage。
+      最新決策：速度優先。needsReview 與 duplicate warning 只做紀錄與提示，不阻擋提交；硬性驗證通過即寫入 Supabase 正式資料。
+    </p>
+  </main>
+</body>
+</html>
