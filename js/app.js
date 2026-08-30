@@ -222,7 +222,7 @@ function standingsCard() {
       <thead><tr>
         <th class="sl">玩家</th>
         <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>STRK</th>
-        <th>RS</th><th>RA</th><th>DIFF</th><th>HOME</th><th>AWAY</th>
+        <th>${SPORT === 'nba2k' ? 'PF' : 'RS'}</th><th>${SPORT === 'nba2k' ? 'PA' : 'RA'}</th><th>DIFF</th><th>HOME</th><th>AWAY</th>
       </tr></thead>
       <tbody>
         ${rows.map(r => {
@@ -463,14 +463,8 @@ function scheduleSuggestion() {
   return { best: ranked[0], pairs: pairs.map(([x, y]) => ({ x, y, c: count[key(x, y)], k: key(x, y) })) };
 }
 
-function reportCard() {
-  const aggs = {};
-  PLAYERS.forEach(p => aggs[p] = recentAgg(p));
-  const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
-
-  // 每人算出所有候選，加權隨機挑一則（分數越高越常出現），橫向反重複＋避免與上次相同
-  const candsBy = {};
-  PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
+// 每人從候選裡加權隨機挑一則（分數越高越常出現），橫向反重複＋避免與上次相同
+function pickInsights(candsBy) {
   const picked = {};
   const fam = c => (c.cat || '').split('-')[0];   // 大類：bat/pit/drama/h2h/team/streak…
   const weightedPick = (list) => {
@@ -494,6 +488,12 @@ function reportCard() {
     lastReportPick[p] = choice.html;
     if (choice && !choice.neutral) usedFam.add(fam(choice));
   });
+  return picked;
+}
+
+// 戰報卡外殼：兩種運動共用（洞察內容各自產生，賽程建議邏輯相同）
+function renderReportCard(candsBy) {
+  const picked = pickInsights(candsBy);
 
   const insights = PLAYERS.map(p => {
     const ins = picked[p];
@@ -524,10 +524,19 @@ function reportCard() {
     </div>`;
 }
 
+function reportCard() {
+  const aggs = {};
+  PLAYERS.forEach(p => aggs[p] = recentAgg(p));
+  const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
+  const candsBy = {};
+  PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
+  return renderReportCard(candsBy);
+}
+
 // 點戰報卡片：純前端重算，只換卡片那塊 DOM（不連網）
 function shuffleReport() {
   const el = document.getElementById('report-card');
-  if (el) el.outerHTML = reportCard();
+  if (el) el.outerHTML = SPORT === 'nba2k' ? nbaReportCard() : reportCard();
 }
 
 function viewHome() {
@@ -538,6 +547,7 @@ function viewHome() {
   }
   if (SPORT === 'nba2k') {
     return `
+      ${nbaReportCard()}
       ${standingsCard()}
       ${nbaCompareCard()}
       <div class="section-title">近期對戰</div>
@@ -640,6 +650,107 @@ function nbaCompareCard() {
       <div class="cmp-title">數據對比</div>
       ${lbBlocks(stats)}
     </div>`;
+}
+
+// 某玩家近 n 場的籃球彙總
+function nbaRecentAgg(player, n = RECENT_N) {
+  const gs = recentGamesOf(player, n);
+  const a = { games: gs.length, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, to: 0,
+              fgm: 0, fga: 0, tpm: 0, tpa: 0, dunks: 0, wl: [], margins: [] };
+  gs.forEach(g => {
+    const s = sideOf(g, player);
+    const opp = g.sides.find(x => x !== s);
+    const st = s.stats || {};
+    a.pts += s.runs;
+    a.ast += st.ast || 0; a.reb += (st.oreb || 0) + (st.dreb || 0);
+    a.stl += st.stl || 0; a.blk += st.blk || 0; a.to += st.to || 0;
+    a.fgm += st.fgm || 0; a.fga += st.fga || 0; a.tpm += st.tpm || 0; a.tpa += st.tpa || 0;
+    a.dunks += st.dunks || 0;
+    a.wl.push(g.winner === player ? 'w' : 'l');            // 新到舊
+    a.margins.push(s.runs - opp.runs);
+  });
+  const per = v => a.games ? v / a.games : 0;
+  a.ppg = per(a.pts); a.apg = per(a.ast); a.rpg = per(a.reb);
+  a.spg = per(a.stl); a.bpg = per(a.blk); a.topg = per(a.to); a.dpg = per(a.dunks);
+  a.fgPct = a.fga ? a.fgm / a.fga : null;
+  a.tpPct = a.tpa ? a.tpm / a.tpa : null;
+  return a;
+}
+
+// 籃球版戰報規則庫（對應 MLB 的 insightCandidates）
+function nbaInsightCandidates(player, ctx) {
+  const { aggs, h2h, teamRec } = ctx;
+  const a = aggs[player];
+  if (a.games === 0) return [{ cat: 'neutral', html: '近期無出賽', score: 0, neutral: true }];
+  const others = PLAYERS.map(p => aggs[p]).filter(x => x.games > 0);
+  const isMax = (val, sel) => val === Math.max(...others.map(sel));
+  const isMin = (val, sel) => val === Math.min(...others.map(sel));
+  const cands = [];
+  const push = (cat, html, score) => cands.push({ cat, html, score });
+  const pct = v => (v * 100).toFixed(1);
+  const lastG = recentGamesOf(player, 1)[0];
+  const lastSt = lastG ? (sideOf(lastG, player).stats || {}) : null;
+  const lastMargin = a.margins[0];
+
+  /* A 進攻 */
+  if (a.ppg >= 80 && isMax(a.ppg, x => x.ppg)) push('off-pts', `場均 ${a.ppg.toFixed(1)} 分，火力全開 🔥`, 90);
+  if (a.tpPct != null && a.tpa >= 8) {
+    if (a.tpPct >= 0.4 && isMax(a.tpPct, x => x.tpa >= 8 ? x.tpPct : -1)) push('off-3p', `三分命中 ${pct(a.tpPct)}%，外線發燙`, 84);
+    else if (a.tpPct < 0.2 && isMin(a.tpPct, x => x.tpa >= 8 ? x.tpPct : Infinity)) push('off-3p', `三分只有 ${pct(a.tpPct)}%，外線鬧乾旱`, 66);
+  }
+  if (a.fgPct != null && a.fga >= 20 && a.fgPct >= 0.55 && isMax(a.fgPct, x => x.fga >= 20 ? x.fgPct : -1)) push('off-fg', `投籃命中 ${pct(a.fgPct)}%，出手就進`, 80);
+  if (a.apg >= 20 && isMax(a.apg, x => x.apg)) push('off-ast', `場均 ${a.apg.toFixed(1)} 次助攻，傳導無私`, 74);
+  if (a.dpg >= 6 && isMax(a.dpg, x => x.dpg)) push('off-dunk', `場均 ${a.dpg.toFixed(1)} 次灌籃，直接扣爛籃框`, 70);
+
+  /* B 防守與籃板 */
+  if (a.rpg >= 25 && isMax(a.rpg, x => x.rpg)) push('def-reb', `場均 ${a.rpg.toFixed(1)} 籃板，禁區之王`, 76);
+  if (a.spg >= 5 && isMax(a.spg, x => x.spg)) push('def-stl', `場均 ${a.spg.toFixed(1)} 次抄截，雙手黏球`, 72);
+  if (a.bpg >= 3 && isMax(a.bpg, x => x.bpg)) push('def-blk', `場均 ${a.bpg.toFixed(1)} 次火鍋，禁區關門`, 68);
+
+  /* C 失誤 */
+  if (a.topg >= 10 && isMax(a.topg, x => x.topg)) push('to', `場均 ${a.topg.toFixed(1)} 次失誤，球先顧好`, 62);
+  else if (a.topg <= 5 && isMin(a.topg, x => x.topg)) push('to', `場均只失誤 ${a.topg.toFixed(1)} 次，控球穩健`, 56);
+
+  /* D 戲劇性（最近一場） */
+  if (lastMargin != null) {
+    if (lastMargin >= 25) push('drama', `上場海放對手 ${lastMargin} 分`, 86);
+    else if (lastMargin <= -25) push('drama-bad', `上場被血洗 ${Math.abs(lastMargin)} 分`, 64);
+    else if (lastMargin > 0 && lastMargin <= 3) push('drama', `上場 ${lastMargin} 分之差驚險守住`, 78);
+    else if (lastMargin < 0 && lastMargin >= -3) push('drama-bad', `上場只差 ${Math.abs(lastMargin)} 分飲恨`, 60);
+  }
+  if (lastSt && (lastSt.fastbreak ?? 0) >= 20) push('drama', `上場快攻拿下 ${lastSt.fastbreak} 分，跑轟成功`, 66);
+  if (lastSt && (lastSt.paint ?? 0) >= 50) push('drama', `上場禁區狂灌 ${lastSt.paint} 分`, 64);
+  if (lastSt && (lastSt.bench ?? 0) >= 25) push('drama', `上場板凳貢獻 ${lastSt.bench} 分，替補發威`, 58);
+
+  /* E 關係・選隊・連勝 */
+  for (const o of PLAYERS) {
+    if (o === player) continue;
+    const rec = h2h[player]?.[o];
+    if (rec && rec.type === 'w' && rec.streak >= 3) push('h2h', `是 ${o} 的苦主，對戰 ${rec.streak} 連勝`, 76);
+    else if (rec && rec.w >= 2 && rec.w === rec.l) push('h2h', `與 ${o} 交手 ${rec.w + rec.l} 場各半，難分高下`, 50);
+  }
+  (teamRec[player] || []).forEach(tr => {
+    if (tr.gp >= 2 && tr.w === tr.gp) push('team', `用 ${tr.team} ${tr.gp} 戰全勝，勝利方程式`, 67);
+    else if (tr.gp >= 2 && tr.w === 0) push('team', `用 ${tr.team} 老是輸，考慮換隊`, 57);
+  });
+  const st = streakOf(player);
+  if (st.streak >= 3) push('streak', st.type === 'w' ? `${st.streak} 連勝，氣勢正旺` : `${st.streak} 連敗，需要止血`, 54 + st.streak);
+
+  if (!cands.length) {
+    const w = a.wl.filter(x => x === 'w').length;
+    return [{ cat: 'neutral', html: `近 ${a.games} 場 ${w} 勝 ${a.games - w} 敗，場均 ${a.ppg.toFixed(1)} 分`, score: 0, neutral: true }];
+  }
+  cands.sort((x, y) => y.score - x.score);
+  return cands;
+}
+
+function nbaReportCard() {
+  const aggs = {};
+  PLAYERS.forEach(p => aggs[p] = nbaRecentAgg(p));
+  const ctx = { aggs, h2h: h2hAll(), teamRec: teamRecordsByPlayer() };
+  const candsBy = {};
+  PLAYERS.forEach(p => candsBy[p] = nbaInsightCandidates(p, ctx));
+  return renderReportCard(candsBy);
 }
 
 // NBA 2K 球隊數據列定義（單場對照表用；lower = 越低越好、neutral = 不比較）
@@ -1050,8 +1161,8 @@ function render() {
   // 運動切換列（單場詳情頁不顯示）
   const isDetail = parts[0] === 'game' && parts[1];
   const sportToggle = isDetail ? '' : `<div class="toggle sport-toggle">
-      <button class="${SPORT === 'mlb' ? 'active' : ''}" onclick="setSport('mlb')">MLB The Show</button>
-      <button class="${SPORT === 'nba2k' ? 'active' : ''}" onclick="setSport('nba2k')">NBA 2K</button>
+      <button class="${SPORT === 'mlb' ? 'active' : ''}" onclick="setSport('mlb')" title="MLB The Show" aria-label="切換到棒球 MLB The Show">⚾</button>
+      <button class="${SPORT === 'nba2k' ? 'active' : ''}" onclick="setSport('nba2k')" title="NBA 2K" aria-label="切換到籃球 NBA 2K">🏀</button>
     </div>`;
 
   app().innerHTML = sportToggle + html;

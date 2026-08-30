@@ -415,7 +415,7 @@ function showReview(data) {
   document.getElementById('step-result').innerHTML = `
     <span class="step-badge">步驟 2／2</span>
     <div class="result-title" style="margin-bottom:4px">核對數據</div>
-    <p class="rv-hint">AI 讀好隊伍和比分了，選一下兩隊各是誰，並對照截圖檢查數據</p>
+    <p class="rv-hint">AI 判讀為 <b>${g.sport === 'nba2k' ? '🏀 NBA 2K' : '⚾ MLB The Show'}</b>，選一下兩隊各是誰，並對照截圖檢查數據</p>
     ${warns.length ? `<div class="warnings">${warns.map(w => `<div class="warning-item">⚠️ ${esc(w)}</div>`).join('')}</div>` : ''}
     <div class="result-score" style="margin:16px 0 4px">
       <div><div class="score-player">客隊</div><div class="rv-tm">${esc(g.awayTeam)}</div><div class="score-num ${awayWon ? 'winner' : ''}">${g.awayScore}</div></div>

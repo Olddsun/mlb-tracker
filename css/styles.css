@@ -350,6 +350,12 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
 
 /* ---------- 運動切換 & NBA 2K ---------- */
 .sport-toggle { margin-bottom: 18px; }
+/* emoji 當圖示：正方形按鈕、字級放大，未選取的降透明度而不是變灰（emoji 本身有顏色） */
+.sport-toggle button {
+  font-size: 24px; line-height: 1; padding: 0; width: 60px; min-height: 44px;
+  opacity: .45; filter: grayscale(0.8); transition: opacity .18s, filter .18s, background .18s;
+}
+.sport-toggle button.active { opacity: 1; filter: none; }
 .nba-detail { padding: 6px 16px 10px; margin-top: 12px; box-shadow: var(--shadow); }
 .nba-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .nba-tbl th { color: var(--text); font-weight: 700; font-size: 14px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
