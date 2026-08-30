@@ -201,7 +201,7 @@
 
     <div class="img-count" id="img-count"></div>
     <div class="img-grid" id="img-grid"></div>
-    <p class="img-hint">點縮圖可替換該張，點 ✕ 移除，點最後的「＋」繼續追加</p>
+    <p class="img-hint" id="img-hint" style="display:none">點縮圖可替換該張，點 ✕ 移除，點最後的「＋」繼續追加</p>
 
     <input type="file" id="file-input-multi" accept="image/*" multiple>
     <input type="file" id="file-input-single" accept="image/*">
@@ -330,8 +330,10 @@ function renderGrid() {
   const addSlot = `<div class="img-slot add" onclick="triggerSingleSelect(-1)" role="button" aria-label="追加截圖"><span class="plus">＋</span></div>`
   grid.innerHTML = thumbs + addSlot
   document.getElementById('img-count').textContent = images.length ? `已選 ${images.length} 張` : ''
+  document.getElementById('img-hint').style.display = images.length ? 'block' : 'none'
   updateSubmitBtn()
 }
+renderGrid()   // 開頁就畫出「＋」追加格，不然使用者只看得到上方按鈕
 
 function removeImage(e, index) {
   e.stopPropagation()
