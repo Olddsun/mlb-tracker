@@ -158,7 +158,8 @@ async function processGame(env, submissionId, imageBuffers) {
     // 單一模型（Haiku，快、約 30 秒內），過硬性驗證；失敗直接回報失敗，不再接力備援（會超時）
     const parsed = await parseWithModel(env, 'claude-haiku-4-5', imageBase64s, imageBuffers.length)
     if (parsed.fatalError) throw new Error(parsed.fatalErrorMessage || '截圖無法辨識，請重拍清楚一點再上傳')
-    reconcileInnings(parsed)   // 逐局比第 1 局常被隊名擋住 → 用總分自動補回，再驗證
+    parsed.sport = parsed.sport === 'nba2k' ? 'nba2k' : 'mlb'
+    if (parsed.sport === 'mlb') reconcileInnings(parsed)   // 逐局比第 1 局常被隊名擋住 → 用總分自動補回，再驗證
     const validationError = validateGame(parsed)
     if (validationError) throw new Error(validationError)
 
@@ -195,15 +196,24 @@ async function parseWithModel(env, model, imageBase64s, imageCount) {
     body: JSON.stringify({
       model,
       max_tokens: 4096,
-      system: `你是 MLB The Show 的 box score 解析器，任務是把截圖裡的數字「一字不差」地讀出來。給你 ${imageCount} 張截圖（順序不固定，可能來自兩隊）。嚴格照下列規則：
+      system: `你是對戰遊戲 box score 截圖解析器，任務是把截圖裡的數字「一字不差」地讀出來。給你 ${imageCount} 張截圖（順序不固定）。嚴格照下列規則：
 
-【判讀原則】
+【第一步：判斷運動】
+- 棒球 box score（比分逐局表／打擊表／投手表）→ sport = "mlb"（MLB The Show）
+- NBA 2K「球隊比較」整場數據畫面（兩隊 logo 分列左右、中間一欄逐列數據對比）→ sport = "nba2k"
+
+【判讀原則】（通用）
 - 只讀截圖上實際看得到的數字，逐格對齊欄位讀，絕不推測或估算。
 - 讀完先在心中核對加總；對不起來就回頭重看那張圖，不要硬湊數字。
 - 真的看不清楚的欄位，設 needsReview: true 並在 uncertainties 說明是哪裡，不要填猜的值。
 - 完全無法辨識的圖，設 fatalError: true。
 
-【每張圖角色】line_score（最上方比分+逐局）、batting（打擊表）、pitching（投手表）。兩隊的 batting/pitching 各自獨立，依截圖上的隊伍名稱歸屬（你不知道玩家是誰，只要分清楚兩支隊伍即可）。
+【籃球 nba2k】
+- 畫面左側是客隊（比分下方標「客隊」）、右側是主隊（標「主隊」）；隊名在最上方左右兩欄（例 Knicks、Spurs）。
+- 中間欄逐列讀：得分、投籃命中（命中/出手 與 %）、三分球、罰球、快攻得分、禁區內得分、二次進攻得分、板凳球員得分、助攻、進攻籃板、防守籃板、抄截、阻攻、失誤（括號內是對手藉失誤得到的分數）、球隊犯規、灌籃、最大領先、持球時間、剩餘暫停數。
+- 對帳：每隊 得分 = 2×投籃命中數 + 三分命中數 + 罰球命中數（三分已含在投籃命中內），不符就重讀。
+
+【棒球 mlb — 每張圖角色】line_score（最上方比分+逐局）、batting（打擊表）、pitching（投手表）。兩隊的 batting/pitching 各自獨立，依截圖上的隊伍名稱歸屬（你不知道玩家是誰，只要分清楚兩支隊伍即可）。
 
 【逐局比分 line_score】
 - 上面那隊是客隊(away)、下面那隊是主隊(home)。
@@ -229,8 +239,9 @@ async function parseWithModel(env, model, imageBase64s, imageCount) {
             type: 'image',
             source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
           })),
-          { type: 'text', text: `回傳以下 JSON 格式：
+          { type: 'text', text: `回傳純 JSON。棒球（sport = "mlb"）格式：
 {
+  "sport": "mlb",
   "image_roles": [{"index":0,"role":"batting","team":"Yankees","confidence":"high"}],
   "home_team": "Yankees",
   "away_team": "Dodgers",
@@ -241,6 +252,24 @@ async function parseWithModel(env, model, imageBase64s, imageCount) {
   "batting": {"home":[{"name":"Aaron Judge","pos":"RF","ab":4,"r":1,"h":2,"rbi":1,"bb":0,"so":1,"hr":1}],"away":[]},
   "pitching": {"home":[{"name":"Max Fried","decision":"W","record":"19-5","ip":"9.0","h":5,"r":0,"er":0,"bb":0,"so":3}],"away":[]},
   "notes": {"hr":["Aaron Judge"],"sb":[{"name":"Trea Turner","count":2}],"errors":["Brandon Marsh"]},
+  "needsReview": false,
+  "uncertainties": [],
+  "fatalError": false,
+  "fatalErrorMessage": null
+}
+
+籃球（sport = "nba2k"）格式（沒有 innings/batting/pitching/notes/player_of_game，改回傳 team_stats）：
+{
+  "sport": "nba2k",
+  "image_roles": [{"index":0,"role":"team_compare","team":"","confidence":"high"}],
+  "home_team": "Spurs",
+  "away_team": "Knicks",
+  "home_score": 90,
+  "away_score": 58,
+  "team_stats": {
+    "away": {"fgm":27,"fga":50,"tpm":0,"tpa":12,"ftm":4,"fta":4,"fastbreak":8,"paint":48,"second_chance":4,"bench":4,"ast":14,"oreb":4,"dreb":9,"stl":6,"blk":0,"to":5,"to_points":10,"fouls":1,"dunks":5,"biggest_lead":2,"possession":"13:14","timeouts":2},
+    "home": {"fgm":40,"fga":49,"tpm":10,"tpa":16,"ftm":0,"fta":0,"fastbreak":15,"paint":56,"second_chance":0,"bench":19,"ast":27,"oreb":0,"dreb":20,"stl":3,"blk":0,"to":6,"to_points":13,"fouls":4,"dunks":13,"biggest_lead":32,"possession":"10:44","timeouts":2}
+  },
   "needsReview": false,
   "uncertainties": [],
   "fatalError": false,
@@ -284,6 +313,7 @@ function validateGame(p) {
   if (typeof p.home_score !== 'number' || typeof p.away_score !== 'number') return '讀不到比分，請重新上傳'
   if (!p.home_team || !p.away_team) return '讀不到隊伍名稱，請重新上傳'
   if (p.home_score === p.away_score) return '兩隊比分相同，判讀可能有誤，請重新上傳'
+  if (p.sport === 'nba2k') return validateNba(p)
   const sum = arr => arr.reduce((s, v) => { const n = parseInt(v); return s + (isNaN(n) ? 0 : n) }, 0)
   if (p.innings?.home && sum(p.innings.home) !== p.home_score) return `主場逐局加總（${sum(p.innings.home)}）與總分（${p.home_score}）不符`
   if (p.innings?.away && sum(p.innings.away) !== p.away_score) return `客場逐局加總（${sum(p.innings.away)}）與總分（${p.away_score}）不符`
@@ -293,12 +323,25 @@ function validateGame(p) {
   return null
 }
 
+// NBA 2K 對帳：得分 = 2×投籃命中 + 三分命中 + 罰球命中（三分已含在投籃命中內）
+function validateNba(p) {
+  for (const side of ['away', 'home']) {
+    const s = p.team_stats?.[side]
+    const label = side === 'home' ? '主隊' : '客隊'
+    if (!s) return `讀不到${label}的球隊數據，請重新上傳`
+    const total = side === 'home' ? p.home_score : p.away_score
+    const calc = 2 * (s.fgm ?? 0) + (s.tpm ?? 0) + (s.ftm ?? 0)
+    if (calc !== total) return `${label}得分（${total}）與命中數推算（${calc}）不符，請重新上傳`
+  }
+  return null
+}
+
 // 解析階段還不知道玩家是誰，改用「今天已有同兩隊對戰」偵測重複（隊伍每場隨機選，撞隊即高度可疑）
 async function detectDuplicates(SUPABASE_URL, headers, p) {
   try {
     const today = new Date().toISOString().slice(0, 10)
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/games?played_at=eq.${today}&sport=eq.mlb&select=id,game_sides(team_name)`,
+      `${SUPABASE_URL}/rest/v1/games?played_at=eq.${today}&sport=eq.${p.sport === 'nba2k' ? 'nba2k' : 'mlb'}&select=id,game_sides(team_name)`,
       { headers }
     )
     const games = await res.json()
@@ -319,7 +362,7 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId) {
     method: 'POST', headers: ph,
     body: JSON.stringify({
       played_at: new Date().toISOString().slice(0, 10),
-      sport: 'mlb',
+      sport: p.sport === 'nba2k' ? 'nba2k' : 'mlb',
       winner_player_id: (p.winner || '').toLowerCase(),
       player_of_game_name: p.player_of_game?.name ?? null,
       player_of_game_team: p.player_of_game?.team ?? null,
@@ -337,19 +380,21 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId) {
     const batting = isHome ? p.batting?.home : p.batting?.away
     const pitching = isHome ? p.pitching?.home : p.pitching?.away
 
+    const sideRow = {
+      game_id: gameId,
+      player_id: (isHome ? p.home_player : p.away_player).toLowerCase(),
+      team_name: isHome ? p.home_team : p.away_team,
+      team_full: isHome ? p.home_team : p.away_team,
+      home_away: isHome ? 'home' : 'away',
+      runs: isHome ? p.home_score : p.away_score,
+      hits: (batting ?? []).reduce((s, b) => s + (b.h ?? 0), 0),
+      errors: 0,
+      innings: isHome ? (p.innings?.home ?? []) : (p.innings?.away ?? []),
+    }
+    if (p.sport === 'nba2k') sideRow.stats = (isHome ? p.team_stats?.home : p.team_stats?.away) ?? {}
     const sideRes = await fetch(`${SUPABASE_URL}/rest/v1/game_sides`, {
       method: 'POST', headers: ph,
-      body: JSON.stringify({
-        game_id: gameId,
-        player_id: (isHome ? p.home_player : p.away_player).toLowerCase(),
-        team_name: isHome ? p.home_team : p.away_team,
-        team_full: isHome ? p.home_team : p.away_team,
-        home_away: isHome ? 'home' : 'away',
-        runs: isHome ? p.home_score : p.away_score,
-        hits: (batting ?? []).reduce((s, b) => s + (b.h ?? 0), 0),
-        errors: 0,
-        innings: isHome ? (p.innings?.home ?? []) : (p.innings?.away ?? []),
-      }),
+      body: JSON.stringify(sideRow),
     })
     if (!sideRes.ok) throw new Error(`game_sides 寫入失敗：${await sideRes.text()}`)
     const sideBody = await sideRes.json()
@@ -429,6 +474,7 @@ function toDisplayGame(p) {
   const homeName = p.home_player_name || cap(p.home_player)
   const awayName = p.away_player_name || cap(p.away_player)
   return {
+    sport: p.sport === 'nba2k' ? 'nba2k' : 'mlb',
     homePlayer: homeName, awayPlayer: awayName,
     homeTeam: p.home_team, awayTeam: p.away_team,
     homeScore: p.home_score, awayScore: p.away_score,
@@ -436,6 +482,7 @@ function toDisplayGame(p) {
     playerOfGame: p.player_of_game || null,
     homeBatting: p.batting?.home ?? [], awayBatting: p.batting?.away ?? [],
     homePitching: p.pitching?.home ?? [], awayPitching: p.pitching?.away ?? [],
+    teamStats: p.team_stats || null,
   }
 }
 

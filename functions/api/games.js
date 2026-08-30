@@ -19,7 +19,6 @@ export async function onRequest(context) {
     fetch(
       `${SUPABASE_URL}/rest/v1/games` +
       `?select=*,game_sides(*,batting_lines(*),pitching_lines(*)),game_notes(*)` +
-      `&sport=eq.mlb` +
       `&order=played_at.desc,legacy_id.desc`,
       { headers }
     ),
@@ -54,6 +53,7 @@ export async function onRequest(context) {
         hits:     side.hits,
         errors:   side.errors,
         innings:  side.innings,
+        stats:    side.stats || null,   // NBA 2K 球隊整場數據（MLB 為 null）
         batting: [...side.batting_lines]
           .sort((a, b) => a.batting_order - b.batting_order)
           .map(b => {
@@ -79,6 +79,7 @@ export async function onRequest(context) {
 
     return {
       id:     game.id,          // 一律用真正的 UUID（原本對匯入資料回傳 legacy_id，導致刪除失敗）
+      sport:  game.sport || 'mlb',
       date:   game.played_at,
       winner: nameOf(game.winner_player_id),
       playerOfGame: game.player_of_game_name

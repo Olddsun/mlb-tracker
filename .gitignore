@@ -7,3 +7,6 @@ assets/logo_options/
 .env.local
 scripts/.env.local
 .dev.vars
+
+scripts/node_modules/
+scripts/package-lock.json

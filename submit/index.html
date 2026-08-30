@@ -90,6 +90,16 @@
   .rv-tbl th.l, .rv-tbl td.l { text-align: left; }
   .rv-tbl td { padding: 5px 6px; text-align: center; color: var(--text); border-bottom: 1px solid rgba(255,255,255,0.05); }
 
+  /* NBA 2K 球隊數據對照表 */
+  .nba-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
+  .nba-tbl th { color: var(--text); font-weight: 700; font-size: 13px; padding: 6px 4px 8px; border-bottom: 1px solid var(--border); }
+  .nba-tbl th.a, .nba-tbl td.a { text-align: left; }
+  .nba-tbl th.h, .nba-tbl td.h { text-align: right; }
+  .nba-tbl td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text); }
+  .nba-tbl td.lab { color: var(--muted); text-align: center; font-size: 12px; white-space: nowrap; padding: 6px 10px; }
+  .nba-tbl td.better { font-weight: 700; }
+  .nba-tbl td.worse { color: var(--muted); }
+
   /* Images */
   .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-bottom: 8px; }
   .img-slot {
@@ -223,6 +233,46 @@ fetch('/api/players').then(r => r.json()).then(d => {
 }).catch(() => {})
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+
+// ── NBA 2K 球隊數據列定義（核對表用；lower = 越低越好、neutral = 不比較） ──
+const NBA_ROWS = [
+  { k: 'fg', lab: '投籃命中', fmt: s => nbaShoot(s.fgm, s.fga) },
+  { k: 'tp', lab: '三分球', fmt: s => nbaShoot(s.tpm, s.tpa) },
+  { k: 'ft', lab: '罰球', fmt: s => nbaShoot(s.ftm, s.fta) },
+  { k: 'fastbreak', lab: '快攻得分' },
+  { k: 'paint', lab: '禁區內得分' },
+  { k: 'second_chance', lab: '二次進攻得分' },
+  { k: 'bench', lab: '板凳球員得分' },
+  { k: 'ast', lab: '助攻' },
+  { k: 'oreb', lab: '進攻籃板' },
+  { k: 'dreb', lab: '防守籃板' },
+  { k: 'stl', lab: '抄截' },
+  { k: 'blk', lab: '阻攻' },
+  { k: 'to', lab: '失誤（對手得分）', fmt: s => `${s.to ?? 0}（${s.to_points ?? 0}）`, lower: true },
+  { k: 'fouls', lab: '球隊犯規', lower: true },
+  { k: 'dunks', lab: '灌籃' },
+  { k: 'biggest_lead', lab: '最大領先' },
+  { k: 'possession', lab: '持球時間', neutral: true },
+  { k: 'timeouts', lab: '剩餘暫停數', neutral: true },
+]
+const nbaShoot = (m, a) => (m == null && a == null) ? '—' : `${m ?? 0}/${a ?? 0}（${a ? Math.round((m ?? 0) / a * 100) : 0}%）`
+
+function nbaRowsHtml(away, home) {
+  const num = (s, r) => r.k === 'fg' ? (s.fgm ?? null) : r.k === 'tp' ? (s.tpm ?? null) : r.k === 'ft' ? (s.ftm ?? null) : (typeof s[r.k] === 'number' ? s[r.k] : null)
+  return NBA_ROWS.map(r => {
+    const av = r.fmt ? r.fmt(away) : (away[r.k] ?? '—')
+    const hv = r.fmt ? r.fmt(home) : (home[r.k] ?? '—')
+    let aCls = '', hCls = ''
+    if (!r.neutral) {
+      const an = num(away, r), hn = num(home, r)
+      if (an != null && hn != null && an !== hn) {
+        const aBetter = r.lower ? an < hn : an > hn
+        aCls = aBetter ? ' better' : ' worse'; hCls = aBetter ? ' worse' : ' better'
+      }
+    }
+    return `<tr><td class="a${aCls}">${esc(av)}</td><td class="lab">${r.lab}</td><td class="h${hCls}">${esc(hv)}</td></tr>`
+  }).join('')
+}
 
 function showStep(id) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
@@ -383,10 +433,18 @@ function showReview(data) {
       </div>
     </div>
     ${g.playerOfGame ? `<div class="rv-pog">★ 單場最佳：${esc(g.playerOfGame.name)}（${esc(g.playerOfGame.team)}）</div>` : ''}
+    ${g.sport === 'nba2k' ? `
+    <div class="rv-scroll"><table class="nba-tbl">
+      <thead><tr><th class="a">${esc(g.awayTeam)}</th><th class="lab"></th><th class="h">${esc(g.homeTeam)}</th></tr></thead>
+      <tbody>
+        <tr><td class="a${awayWon ? ' better' : ' worse'}">${g.awayScore}</td><td class="lab">得分</td><td class="h${awayWon ? ' worse' : ' better'}">${g.homeScore}</td></tr>
+        ${nbaRowsHtml(g.teamStats?.away || {}, g.teamStats?.home || {})}
+      </tbody>
+    </table></div>` : `
     <div class="rv-tables">
       ${teamBlock('客隊', g.awayTeam, g.awayBatting, g.awayPitching)}
       ${teamBlock('主隊', g.homeTeam, g.homeBatting, g.homePitching)}
-    </div>
+    </div>`}
     <button class="btn btn-primary" id="rv-confirm" onclick="commitGame()" disabled>先選好兩隊是誰</button>
     <button class="btn btn-ghost" onclick="showStep('step-upload')">數據有誤，重新上傳</button>
   `
