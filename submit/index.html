@@ -41,6 +41,12 @@
   .step { display: none; }
   .step.active { display: block; }
 
+  .step-badge {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    color: var(--accent); background: rgba(79,142,247,0.12);
+    border-radius: 999px; padding: 4px 12px; margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
   .step-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
   .step-desc { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
 
@@ -67,26 +73,17 @@
   }
   .player-btn.selected { border-color: var(--accent); background: rgba(79,142,247,0.12); color: var(--accent); }
 
-  /* Team combobox */
-  .team-combo { position: relative; }
-  .team-combo input.filled { border-color: var(--accent); }
-  .combo-list {
-    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
-    background: #1e2531; border: 1px solid var(--border); border-radius: 10px;
-    max-height: 260px; overflow-y: auto; box-shadow: 0 10px 28px rgba(0,0,0,0.55);
-    -webkit-overflow-scrolling: touch;
+  /* 指定玩家（核對畫面） */
+  .assign-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px; margin: 14px 0 18px; text-align: left;
   }
-  .combo-list.hidden { display: none; }
-  .combo-opt {
-    display: flex; align-items: baseline; gap: 8px; min-height: 46px;
-    padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
-    touch-action: manipulation;
-  }
-  .combo-opt:last-child { border-bottom: none; }
-  .combo-opt:active { background: rgba(79,142,247,0.16); }
-  .combo-opt .zh { font-size: 15px; color: var(--text); font-weight: 600; }
-  .combo-opt .en { font-size: 12px; color: var(--muted); }
-  .combo-empty { padding: 13px 14px; color: var(--muted); font-size: 13px; }
+  .assign-row { margin-bottom: 16px; }
+  .assign-row:last-child { margin-bottom: 0; }
+  .assign-label { font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+  .assign-label b { color: var(--text); }
+  .assign-box .player-btn { background: var(--bg); }
+  .assign-box .player-btn.selected { background: rgba(79,142,247,0.12); }
 
   /* 核對數據畫面 */
   .rv-hint { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
@@ -192,64 +189,11 @@
 
 <div class="container">
 
-  <!-- Step 1: 身份 -->
-  <div class="step active" id="step-identity">
-    <div class="step-title">你是誰？</div>
-    <div class="step-desc">選擇提交者並輸入 token</div>
-
-    <div class="field">
-      <label>提交者</label>
-      <div class="player-grid">
-        <button class="player-btn" data-player="Scott" onclick="selectPlayer(this)">Scott</button>
-        <button class="player-btn" data-player="Alvin" onclick="selectPlayer(this)">Alvin</button>
-        <button class="player-btn" data-player="Vincent" onclick="selectPlayer(this)">Vincent</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>Token</label>
-      <input type="text" id="token-input" placeholder="輸入你的名字" autocomplete="off" autocorrect="off">
-    </div>
-
-    <button class="btn btn-primary" onclick="goToStep2()">下一步</button>
-  </div>
-
-  <!-- Step 2: 對戰資訊 -->
-  <div class="step" id="step-match">
-    <div class="step-title">這場怎麼打？</div>
-    <div class="step-desc">選好玩家和隊伍就行</div>
-
-    <div class="field">
-      <label>你（<span id="me-name">Scott</span>）用哪隊？</label>
-      <div class="team-combo">
-        <input type="text" id="team-me" placeholder="打隊名搜尋，例：釀" autocomplete="off" autocorrect="off" inputmode="search">
-        <div class="combo-list hidden" id="list-me"></div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label>對手是誰？</label>
-      <div class="player-grid" id="opp-grid" style="grid-template-columns:repeat(2,1fr)"></div>
-    </div>
-
-    <div class="field">
-      <label>對手用哪隊？</label>
-      <div class="team-combo">
-        <input type="text" id="team-opp" placeholder="打隊名搜尋，例：響" autocomplete="off" autocorrect="off" inputmode="search">
-        <div class="combo-list hidden" id="list-opp"></div>
-      </div>
-    </div>
-
-    <input type="hidden" id="mapping-input">
-
-    <button class="btn btn-primary" onclick="goToStep3()">下一步</button>
-    <button class="btn btn-ghost" onclick="showStep('step-identity')">上一步</button>
-  </div>
-
-  <!-- Step 3: 上傳截圖 -->
-  <div class="step" id="step-upload">
-    <div class="step-title">上傳截圖</div>
-    <div class="step-desc">張數不限，順序也不用排，AI 會自動判斷</div>
+  <!-- Step 1: 上傳截圖（含身分驗證） -->
+  <div class="step active" id="step-upload">
+    <span class="step-badge">步驟 1／2</span>
+    <div class="step-title">上傳戰績截圖</div>
+    <div class="step-desc">張數不限，順序不用排，AI 會自動判斷隊伍和比分</div>
 
     <button class="btn btn-ghost" onclick="triggerMultiSelect()" style="margin-top:0;margin-bottom:14px;">
       選擇截圖（可一次多選）
@@ -262,10 +206,23 @@
     <input type="file" id="file-input-multi" accept="image/*" multiple>
     <input type="file" id="file-input-single" accept="image/*">
 
+    <div class="field" style="margin-top:28px">
+      <label>提交者（驗證身分用）</label>
+      <div class="player-grid" id="submitter-grid">
+        <button class="player-btn" data-player="Scott" onclick="selectPlayer(this)">Scott</button>
+        <button class="player-btn" data-player="Alvin" onclick="selectPlayer(this)">Alvin</button>
+        <button class="player-btn" data-player="Vincent" onclick="selectPlayer(this)">Vincent</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="token-input">Token</label>
+      <input type="text" id="token-input" placeholder="輸入你的名字" autocomplete="off" autocorrect="off">
+    </div>
+
     <button class="btn btn-primary" id="submit-btn" onclick="submitGame()" disabled>
       送出分析
     </button>
-    <button class="btn btn-ghost" onclick="showStep('step-match')">上一步</button>
   </div>
 
   <!-- Processing -->
@@ -274,7 +231,7 @@
     <div class="processing-msg" id="processing-msg">AI 解析中，請稍候…</div>
   </div>
 
-  <!-- Result -->
+  <!-- Step 2: 核對數據＋指定玩家（動態渲染）；也共用於成功／失敗畫面 -->
   <div class="step" id="step-result"></div>
 
 </div>
@@ -283,90 +240,27 @@
 let selectedPlayer = ''
 let currentSlot = -1
 let images = []  // 動態張數，每個元素是壓縮後的 blob
-
-// ── Step 2：玩家與隊伍選擇 ──
-const ALL_PLAYERS = ['Scott', 'Alvin', 'Vincent']
-let oppPlayer = ''
-let teamMe = null, teamOpp = null
-const MLB_TEAMS = [
-  { zh: '洋基', en: 'Yankees' }, { zh: '紅襪', en: 'Red Sox' }, { zh: '藍鳥', en: 'Blue Jays' }, { zh: '光芒', en: 'Rays' }, { zh: '金鶯', en: 'Orioles' },
-  { zh: '守護者', en: 'Guardians' }, { zh: '白襪', en: 'White Sox' }, { zh: '老虎', en: 'Tigers' }, { zh: '皇家', en: 'Royals' }, { zh: '雙城', en: 'Twins' },
-  { zh: '太空人', en: 'Astros' }, { zh: '遊騎兵', en: 'Rangers' }, { zh: '運動家', en: 'Athletics' }, { zh: '天使', en: 'Angels' }, { zh: '水手', en: 'Mariners' },
-  { zh: '大都會', en: 'Mets' }, { zh: '勇士', en: 'Braves' }, { zh: '費城人', en: 'Phillies' }, { zh: '國民', en: 'Nationals' }, { zh: '馬林魚', en: 'Marlins' },
-  { zh: '釀酒人', en: 'Brewers' }, { zh: '紅雀', en: 'Cardinals' }, { zh: '小熊', en: 'Cubs' }, { zh: '海盜', en: 'Pirates' }, { zh: '紅人', en: 'Reds' },
-  { zh: '道奇', en: 'Dodgers' }, { zh: '教士', en: 'Padres' }, { zh: '巨人', en: 'Giants' }, { zh: '響尾蛇', en: 'Diamondbacks' }, { zh: '落磯', en: 'Rockies' },
-]
-const teamLabel = (t) => `${t.zh}（${t.en}）`
-
-function renderComboList(list, query) {
-  const q = (query || '').trim().toLowerCase()
-  const rows = MLB_TEAMS.map((t, i) => ({ t, i })).filter(({ t }) => !q || t.zh.includes(q) || t.en.toLowerCase().includes(q))
-  list.innerHTML = rows.length
-    ? rows.map(({ t, i }) => `<div class="combo-opt" data-i="${i}"><span class="zh">${t.zh}</span><span class="en">${t.en}</span></div>`).join('')
-    : '<div class="combo-empty">找不到這隊</div>'
-  list.classList.remove('hidden')
-}
-
-function setupCombo(inputId, listId, setter) {
-  const input = document.getElementById(inputId)
-  const list = document.getElementById(listId)
-  input.addEventListener('focus', () => { input.select(); renderComboList(list, '') })
-  input.addEventListener('input', () => { setter(null); input.classList.remove('filled'); renderComboList(list, input.value) })
-  input.addEventListener('blur', () => setTimeout(() => list.classList.add('hidden'), 200))
-  list.addEventListener('click', (e) => {
-    const opt = e.target.closest('.combo-opt'); if (!opt) return
-    const t = MLB_TEAMS[+opt.dataset.i]
-    setter(t); input.value = teamLabel(t); input.classList.add('filled'); list.classList.add('hidden')
-  })
-}
-setupCombo('team-me', 'list-me', (t) => { teamMe = t })
-setupCombo('team-opp', 'list-opp', (t) => { teamOpp = t })
-
-function renderOpponents() {
-  const grid = document.getElementById('opp-grid')
-  const others = ALL_PLAYERS.filter(p => p !== selectedPlayer)
-  if (!others.includes(oppPlayer)) oppPlayer = ''
-  grid.innerHTML = others.map(p => `<button class="player-btn${p === oppPlayer ? ' selected' : ''}" data-player="${p}" onclick="selectOpp(this)">${p}</button>`).join('')
-}
-function selectOpp(btn) {
-  document.querySelectorAll('#opp-grid .player-btn').forEach(b => b.classList.remove('selected'))
-  btn.classList.add('selected'); oppPlayer = btn.dataset.player
-}
-
 let currentSubmissionId = null
+let assign = { home: '', away: '' }   // 核對畫面：兩隊各是哪位玩家
+
+const ALL_PLAYERS = ['Scott', 'Alvin', 'Vincent']
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
 function selectPlayer(btn) {
-  document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'))
+  document.querySelectorAll('#submitter-grid .player-btn').forEach(b => b.classList.remove('selected'))
   btn.classList.add('selected')
   selectedPlayer = btn.dataset.player
   const tokenInput = document.getElementById('token-input')
   if (!tokenInput.value) tokenInput.value = selectedPlayer
+  updateSubmitBtn()
 }
+
+document.getElementById('token-input').addEventListener('input', updateSubmitBtn)
 
 function showStep(id) {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById(id).classList.add('active')
   window.scrollTo(0, 0)
-}
-
-function goToStep2() {
-  if (!selectedPlayer) return alert('請選擇提交者')
-  const token = document.getElementById('token-input').value.trim()
-  if (!token) return alert('請輸入 Token')
-  document.getElementById('me-name').textContent = selectedPlayer
-  renderOpponents()
-  showStep('step-match')
-}
-
-function goToStep3() {
-  if (!teamMe) return alert(`請選擇 ${selectedPlayer} 用的隊伍`)
-  if (!oppPlayer) return alert('請選擇對手')
-  if (!teamOpp) return alert(`請選擇 ${oppPlayer} 用的隊伍`)
-  document.getElementById('mapping-input').value =
-    `${selectedPlayer}：${teamLabel(teamMe)} / ${oppPlayer}：${teamLabel(teamOpp)}`
-  renderGrid()
-  showStep('step-upload')
 }
 
 // 多選（一次可選任意張數，追加到現有清單）
@@ -429,7 +323,8 @@ function removeImage(e, index) {
 }
 
 function updateSubmitBtn() {
-  document.getElementById('submit-btn').disabled = images.length < 1
+  const token = document.getElementById('token-input').value.trim()
+  document.getElementById('submit-btn').disabled = !(images.length >= 1 && selectedPlayer && token)
 }
 
 async function compressImage(file) {
@@ -451,8 +346,10 @@ async function compressImage(file) {
 }
 
 async function submitGame() {
+  if (!images.length) return alert('請至少上傳 1 張截圖')
+  if (!selectedPlayer) return alert('請選擇提交者')
   const token = document.getElementById('token-input').value.trim()
-  const rawUserInput = document.getElementById('mapping-input').value.trim()
+  if (!token) return alert('請輸入 Token')
 
   showStep('step-processing')
   setMsg('AI 解析中，約需 30 秒 ⏳　請留在此畫面、不要離開或關閉，否則會讀取失敗')
@@ -461,10 +358,9 @@ async function submitGame() {
     const formData = new FormData()
     formData.append('submittedBy', selectedPlayer)
     formData.append('token', token)
-    formData.append('rawUserInput', rawUserInput)
     images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
-    // 後端同步解析完回應（約 30 秒），回來是解析結果讓你先核對，不會直接記錄
+    // 後端同步解析完回應（約 30 秒），回來是解析結果讓你先核對＋指定玩家，不會直接記錄
     const res = await fetch('/api/submit-game', { method: 'POST', body: formData })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上傳失敗')
@@ -475,13 +371,19 @@ async function submitGame() {
   }
 }
 
-// 審核畫面：把 AI 讀到的數據攤開讓使用者核對，確認才記錄
+// 核對畫面：AI 讀到的隊伍/比分/數據攤開核對，並指定兩隊各是哪位玩家，確認才記錄
 function showReview(data) {
   currentSubmissionId = data.submissionId
+  assign = { home: '', away: '' }
   const g = data.game
   const warns = []
   if (data.needsReview) warns.push('AI 對部分數據不太確定，請仔細核對')
-  if ((data.duplicates?.length ?? 0) > 0) warns.push('這場好像記過了（同一天、同兩位玩家已有紀錄）')
+  if ((data.duplicates?.length ?? 0) > 0) warns.push('這場好像記過了（今天已有同兩隊的比賽紀錄）')
+
+  const awayWon = g.awayScore > g.homeScore
+  const playerBtns = (side) => ALL_PLAYERS.map(p =>
+    `<button class="player-btn" data-player="${p}" onclick="pickAssign('${side}', this)">${p}</button>`
+  ).join('')
 
   const teamBlock = (label, teamName, batting, pitching) => `
     <div class="rv-team">
@@ -496,32 +398,69 @@ function showReview(data) {
 
   showStep('step-result')
   document.getElementById('step-result').innerHTML = `
+    <span class="step-badge">步驟 2／2</span>
     <div class="result-title" style="margin-bottom:4px">核對數據</div>
-    <p class="rv-hint">對照你的截圖檢查有沒有讀錯，正確再記錄</p>
+    <p class="rv-hint">AI 讀好隊伍和比分了，選一下兩隊各是誰，並對照截圖檢查數據</p>
     ${warns.length ? `<div class="warnings">${warns.map(w => `<div class="warning-item">⚠️ ${esc(w)}</div>`).join('')}</div>` : ''}
     <div class="result-score" style="margin:16px 0 4px">
-      <div><div class="score-player">${esc(g.awayPlayer)}</div><div class="rv-tm">${esc(g.awayTeam)}</div><div class="score-num ${g.winner === g.awayPlayer ? 'winner' : ''}">${g.awayScore}</div></div>
+      <div><div class="score-player">客隊</div><div class="rv-tm">${esc(g.awayTeam)}</div><div class="score-num ${awayWon ? 'winner' : ''}">${g.awayScore}</div></div>
       <div class="score-vs">VS</div>
-      <div><div class="score-player">${esc(g.homePlayer)}</div><div class="rv-tm">${esc(g.homeTeam)}</div><div class="score-num ${g.winner === g.homePlayer ? 'winner' : ''}">${g.homeScore}</div></div>
+      <div><div class="score-player">主隊</div><div class="rv-tm">${esc(g.homeTeam)}</div><div class="score-num ${awayWon ? '' : 'winner'}">${g.homeScore}</div></div>
+    </div>
+    <div class="assign-box">
+      <div class="assign-row">
+        <div class="assign-label">客隊 <b>${esc(g.awayTeam)}</b>（${g.awayScore} 分）是誰打的？</div>
+        <div class="player-grid" data-aside="away">${playerBtns('away')}</div>
+      </div>
+      <div class="assign-row">
+        <div class="assign-label">主隊 <b>${esc(g.homeTeam)}</b>（${g.homeScore} 分）是誰打的？</div>
+        <div class="player-grid" data-aside="home">${playerBtns('home')}</div>
+      </div>
     </div>
     ${g.playerOfGame ? `<div class="rv-pog">★ 單場最佳：${esc(g.playerOfGame.name)}（${esc(g.playerOfGame.team)}）</div>` : ''}
     <div class="rv-tables">
-      ${teamBlock(g.awayPlayer, g.awayTeam, g.awayBatting, g.awayPitching)}
-      ${teamBlock(g.homePlayer, g.homeTeam, g.homeBatting, g.homePitching)}
+      ${teamBlock('客隊', g.awayTeam, g.awayBatting, g.awayPitching)}
+      ${teamBlock('主隊', g.homeTeam, g.homeBatting, g.homePitching)}
     </div>
-    <button class="btn btn-primary" id="rv-confirm" onclick="commitGame()">確認無誤，記錄這場</button>
+    <button class="btn btn-primary" id="rv-confirm" onclick="commitGame()" disabled>先選好兩隊是誰</button>
     <button class="btn btn-ghost" onclick="showStep('step-upload')">數據有誤，重新上傳</button>
   `
 }
 
-// 使用者按確認 → 才真正寫入正式資料
+// 指定某一隊的玩家；同一人不能同時打兩隊，選了會把另一隊的相同人選清掉
+function pickAssign(side, btn) {
+  const p = btn.dataset.player
+  assign[side] = p
+  const other = side === 'home' ? 'away' : 'home'
+  if (assign[other] === p) assign[other] = ''
+  renderAssignState()
+}
+
+function renderAssignState() {
+  for (const side of ['home', 'away']) {
+    document.querySelectorAll(`[data-aside="${side}"] .player-btn`).forEach(b =>
+      b.classList.toggle('selected', b.dataset.player === assign[side]))
+  }
+  const ok = assign.home && assign.away && assign.home !== assign.away
+  const btn = document.getElementById('rv-confirm')
+  if (btn) {
+    btn.disabled = !ok
+    btn.textContent = ok ? '確認無誤，記錄這場' : '先選好兩隊是誰'
+  }
+}
+
+// 使用者按確認 → 帶上玩家指定，才真正寫入正式資料
 async function commitGame() {
   const btn = document.getElementById('rv-confirm')
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…' }
   try {
     const res = await fetch('/api/submit-game', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ submissionId: currentSubmissionId }),
+      body: JSON.stringify({
+        submissionId: currentSubmissionId,
+        homePlayer: assign.home,
+        awayPlayer: assign.away,
+      }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '記錄失敗')
@@ -580,7 +519,7 @@ function showError(msg) {
   `
 }
 
-// PWA 自動更新：切回前台檢查新版、新 SW 接管時自動重載（提交頁原本沒有這段）
+// PWA 自動更新：切回前台檢查新版、新 SW 接管時自動重載
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
     reg.update();

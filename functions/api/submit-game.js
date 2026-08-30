@@ -22,7 +22,6 @@ async function parsePhase(context) {
 
   const submittedBy = formData.get('submittedBy')
   const token = formData.get('token')
-  const rawUserInput = formData.get('rawUserInput')
 
   // ── Token 驗證
   const PLAYER_TOKENS = JSON.parse(env.PLAYER_TOKENS || '{}')
@@ -49,7 +48,6 @@ async function parsePhase(context) {
     body: JSON.stringify({
       id: submissionId,
       submitted_by: submittedBy.toLowerCase(),
-      raw_user_input: rawUserInput,
       image_paths: imagePaths,
       status: 'received',
     }),
@@ -74,8 +72,8 @@ async function parsePhase(context) {
 
   await updateSub(SUPABASE_URL, sbHeaders, submissionId, { status: 'uploaded' })
 
-  // ── 同步解析後存起來、回傳給前端審核（尚未寫入正式資料，等使用者按確認）
-  const result = await processGame(env, submissionId, imageBuffers, rawUserInput)
+  // ── 同步解析後存起來、回傳給前端審核（尚未寫入正式資料，等使用者指定玩家＋確認）
+  const result = await processGame(env, submissionId, imageBuffers)
   if (!result.ok) return json({ status: 'failed', error: result.error })
   return json({ status: 'parsed', submissionId, game: result.game, duplicates: result.duplicates, needsReview: result.needsReview })
 }
@@ -104,6 +102,26 @@ async function commitPhase(context) {
   const parsed = sub.parsed_game_json
   if (!parsed) return json({ error: '沒有可記錄的資料，請重新上傳' }, 400)
 
+  // ── 玩家指定：核對畫面選好「兩隊各是誰」才能記錄
+  const validPlayers = Object.keys(JSON.parse(env.PLAYER_TOKENS || '{}'))
+  const homePlayer = body.homePlayer
+  const awayPlayer = body.awayPlayer
+  if (!validPlayers.includes(homePlayer) || !validPlayers.includes(awayPlayer)) {
+    return json({ error: '請先指定兩隊各是哪位玩家' }, 400)
+  }
+  if (homePlayer === awayPlayer) return json({ error: '兩隊不能是同一位玩家' }, 400)
+
+  parsed.home_player = homePlayer.toLowerCase()
+  parsed.away_player = awayPlayer.toLowerCase()
+  parsed.winner = parsed.home_score > parsed.away_score ? parsed.home_player : parsed.away_player
+
+  // 先把玩家指定寫回 submission 再寫正式資料，中斷重試時畫面才有名字
+  await updateSub(SUPABASE_URL, sbHeaders, submissionId, {
+    parsed_game_json: parsed,
+    player_a: parsed.home_player, team_a: parsed.home_team,
+    player_b: parsed.away_player, team_b: parsed.away_team,
+  })
+
   // 防重複寫入：若這筆 submission 已經寫過 game（快速連點/兩個分頁），直接回既有結果
   const existRes = await fetch(`${SUPABASE_URL}/rest/v1/games?submission_id=eq.${submissionId}&select=id`, { headers: sbHeaders })
   const existing = await existRes.json()
@@ -123,7 +141,7 @@ async function commitPhase(context) {
 
 // ── 背景處理：Claude Vision + 驗證 + 寫 DB ────────────────────
 
-async function processGame(env, submissionId, imageBuffers, rawUserInput) {
+async function processGame(env, submissionId, imageBuffers) {
   const SUPABASE_URL = env.SUPABASE_URL
   const KEY = env.SUPABASE_SERVICE_ROLE_KEY
   const sbHeaders = { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
@@ -135,7 +153,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput) {
     const imageBase64s = imageBuffers.map(buf => bufToBase64(buf))
 
     // 單一模型（Haiku，快、約 30 秒內），過硬性驗證；失敗直接回報失敗，不再接力備援（會超時）
-    const parsed = await parseWithModel(env, 'claude-haiku-4-5', imageBase64s, rawUserInput, imageBuffers.length)
+    const parsed = await parseWithModel(env, 'claude-haiku-4-5', imageBase64s, imageBuffers.length)
     if (parsed.fatalError) throw new Error(parsed.fatalErrorMessage || '截圖無法辨識，請重拍清楚一點再上傳')
     reconcileInnings(parsed)   // 逐局比第 1 局常被隊名擋住 → 用總分自動補回，再驗證
     const validationError = validateGame(parsed)
@@ -150,9 +168,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput) {
       uncertainties: parsed.uncertainties ?? [],
       duplicate_candidates: duplicates,
       status: 'uploaded',
-      player_a: parsed.home_player,
       team_a: parsed.home_team,
-      player_b: parsed.away_player,
       team_b: parsed.away_team,
     })
 
@@ -165,7 +181,7 @@ async function processGame(env, submissionId, imageBuffers, rawUserInput) {
 
 // ── Claude Vision 解析（可指定模型）────────────────────────────
 
-async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount) {
+async function parseWithModel(env, model, imageBase64s, imageCount) {
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -184,7 +200,7 @@ async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount
 - 真的看不清楚的欄位，設 needsReview: true 並在 uncertainties 說明是哪裡，不要填猜的值。
 - 完全無法辨識的圖，設 fatalError: true。
 
-【每張圖角色】line_score（最上方比分+逐局）、batting（打擊表）、pitching（投手表）。兩隊的 batting/pitching 各自獨立，依玩家隊伍對應歸屬。
+【每張圖角色】line_score（最上方比分+逐局）、batting（打擊表）、pitching（投手表）。兩隊的 batting/pitching 各自獨立，依截圖上的隊伍名稱歸屬（你不知道玩家是誰，只要分清楚兩支隊伍即可）。
 
 【逐局比分 line_score】
 - 上面那隊是客隊(away)、下面那隊是主隊(home)。
@@ -205,7 +221,7 @@ async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount
       messages: [{
         role: 'user',
         content: [
-          { type: 'text', text: `玩家隊伍對應：${rawUserInput}\n以下是 ${imageCount} 張截圖（順序不固定）：` },
+          { type: 'text', text: `以下是 ${imageCount} 張截圖（順序不固定）：` },
           ...imageBase64s.map(b64 => ({
             type: 'image',
             source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
@@ -213,13 +229,10 @@ async function parseWithModel(env, model, imageBase64s, rawUserInput, imageCount
           { type: 'text', text: `回傳以下 JSON 格式：
 {
   "image_roles": [{"index":0,"role":"batting","team":"Yankees","confidence":"high"}],
-  "home_player": "scott",
-  "away_player": "alvin",
   "home_team": "Yankees",
   "away_team": "Dodgers",
   "home_score": 5,
   "away_score": 3,
-  "winner": "scott",
   "player_of_game": {"name":"Aaron Judge","team":"Yankees"},
   "innings": {"home":["0","2","0","0","1","0","2","0","0"],"away":["0","0","0","0","0","0","0","0","X"]},
   "batting": {"home":[{"name":"Aaron Judge","pos":"RF","ab":4,"r":1,"h":2,"rbi":1,"bb":0,"so":1,"hr":1}],"away":[]},
@@ -265,13 +278,9 @@ function reconcileInnings(p) {
 // ── 驗證 ──────────────────────────────────────────────────────
 
 function validateGame(p) {
-  const w = (p.winner || '').toLowerCase()
-  const hp = (p.home_player || '').toLowerCase()
-  const ap = (p.away_player || '').toLowerCase()
-  if (!w || (w !== hp && w !== ap)) return '無法判斷勝方（或勝方對應不到玩家），請重新上傳'
   if (typeof p.home_score !== 'number' || typeof p.away_score !== 'number') return '讀不到比分，請重新上傳'
-  if (w === hp && p.home_score <= p.away_score) return '勝負與比分不一致'
-  if (w === ap && p.away_score <= p.home_score) return '勝負與比分不一致'
+  if (!p.home_team || !p.away_team) return '讀不到隊伍名稱，請重新上傳'
+  if (p.home_score === p.away_score) return '兩隊比分相同，判讀可能有誤，請重新上傳'
   const sum = arr => arr.reduce((s, v) => { const n = parseInt(v); return s + (isNaN(n) ? 0 : n) }, 0)
   if (p.innings?.home && sum(p.innings.home) !== p.home_score) return `主場逐局加總（${sum(p.innings.home)}）與總分（${p.home_score}）不符`
   if (p.innings?.away && sum(p.innings.away) !== p.away_score) return `客場逐局加總（${sum(p.innings.away)}）與總分（${p.away_score}）不符`
@@ -281,19 +290,20 @@ function validateGame(p) {
   return null
 }
 
+// 解析階段還不知道玩家是誰，改用「今天已有同兩隊對戰」偵測重複（隊伍每場隨機選，撞隊即高度可疑）
 async function detectDuplicates(SUPABASE_URL, headers, p) {
   try {
     const today = new Date().toISOString().slice(0, 10)
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/games?played_at=eq.${today}&sport=eq.mlb&select=id,game_sides(player_id)`,
+      `${SUPABASE_URL}/rest/v1/games?played_at=eq.${today}&sport=eq.mlb&select=id,game_sides(team_name)`,
       { headers }
     )
     const games = await res.json()
-    const home = (p.home_player || '').toLowerCase()
-    const away = (p.away_player || '').toLowerCase()
+    const home = (p.home_team || '').toLowerCase()
+    const away = (p.away_team || '').toLowerCase()
     return games.filter(g => {
-      const players = new Set((g.game_sides || []).map(s => (s.player_id || '').toLowerCase()))
-      return players.has(home) && players.has(away)
+      const teams = new Set((g.game_sides || []).map(s => (s.team_name || '').toLowerCase()))
+      return teams.has(home) && teams.has(away)
     }).map(g => g.id)
   } catch { return [] }
 }
@@ -428,7 +438,7 @@ function toDisplayGame(p) {
 function buildWarnings(sub) {
   return [
     ...(sub.needs_review ? ['AI 對部分數據不太確定，記錄後建議再核對一次'] : []),
-    ...(((sub.duplicate_candidates?.length) ?? 0) > 0 ? ['這場好像記過了（同一天、同兩位玩家已有紀錄）'] : []),
+    ...(((sub.duplicate_candidates?.length) ?? 0) > 0 ? ['這場好像記過了（今天已有同兩隊的比賽紀錄）'] : []),
   ]
 }
 
