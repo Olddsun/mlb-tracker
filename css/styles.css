@@ -12,9 +12,6 @@
   --win: #22c55e;
   --loss: #f05252;
   --gold: #f5a524;
-  --scott: #4f8ef7;
-  --alvin: #f5a524;
-  --vincent: #34d399;
   --radius: 16px;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0,0,0,0.3);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -131,10 +128,7 @@ main.wrap { padding-top: 28px; }
 .standings-tbl tr:last-child td { border-bottom: none; }
 .standings-tbl td.sl { text-align: left; padding-left: 18px; position: sticky; left: 0; background: var(--surface); z-index: 1; }
 .standings-tbl .pl-row { display: flex; align-items: center; gap: 10px; font-weight: 600; }
-.s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.s-dot.scott { background: var(--scott); }
-.s-dot.alvin { background: var(--alvin); }
-.s-dot.vincent { background: var(--vincent); }
+.s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
 .standings-tbl .mono { font-family: 'Fira Code', monospace; font-variant-numeric: tabular-nums; }
 .standings-tbl .gb { color: var(--muted); }
 .standings-tbl .rec { color: var(--muted); }
@@ -150,31 +144,22 @@ main.wrap { padding-top: 28px; }
 .h2h-player .name { font-size: clamp(19px, 6vw, 34px); font-weight: 700; }
 .h2h-player .wins { font-family: var(--condensed); font-size: clamp(46px, 16vw, 72px); font-weight: 700; line-height: 1; margin-top: 4px; letter-spacing: 1px; }
 .h2h-player .wr { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.h2h-player .name.scott { color: var(--scott); }
-.h2h-player .name.alvin { color: var(--alvin); }
-.h2h-player .name.vincent { color: var(--vincent); }
 .h2h-player.leader .wins { color: var(--win); }
 
-/* ---------- Player comparison ---------- */
+/* ---------- Player comparison（排行式，人數可擴充） ---------- */
 .compare { padding: 22px 18px; box-shadow: var(--shadow); margin-top: 16px; }
 .cmp-title { text-align: center; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 20px; }
-.cmp-stat { margin-bottom: 20px; }
-.cmp-stat:last-child { margin-bottom: 0; }
-.cmp-lab { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .8px; }
-.cmp-cols { display: flex; gap: 6px; margin-bottom: 6px; }
-.cmp-col { flex: 1; text-align: center; }
-.cmp-col .v { font-family: var(--condensed); font-size: 26px; font-weight: 700; color: var(--muted); display: block; letter-spacing: .5px; }
-.cmp-col .pname { font-size: 11px; color: var(--muted); margin-top: 3px; display: block; font-weight: 600; }
-.cmp-col .pname.s { color: var(--scott); }
-.cmp-col .pname.a { color: var(--alvin); }
-.cmp-col .pname.v { color: var(--vincent); }
-.cmp-col.lead-s .v { color: var(--scott); }
-.cmp-col.lead-a .v { color: var(--alvin); }
-.cmp-col.lead-v .v { color: var(--vincent); }
-.cmp-bar { height: 8px; border-radius: 4px; background: var(--surface-2); display: flex; overflow: hidden; }
-.cmp-bar .seg-s { background: var(--scott); transition: width .3s; }
-.cmp-bar .seg-a { background: var(--alvin); transition: width .3s; }
-.cmp-bar .seg-v { background: var(--vincent); transition: width .3s; }
+.lb-stat { margin-bottom: 22px; }
+.lb-stat:last-child { margin-bottom: 0; }
+.lb-lab { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .8px; }
+.lb-row { display: grid; grid-template-columns: 18px minmax(58px, 84px) 1fr 56px; align-items: center; gap: 9px; padding: 3px 0; }
+.lb-rank { font-size: 11px; color: var(--muted); text-align: center; }
+.lb-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-track { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; display: block; }
+.lb-fill { display: block; height: 100%; border-radius: 4px; transition: width .3s; }
+.lb-val { font-family: var(--condensed); font-size: 17px; font-weight: 700; text-align: right; color: var(--muted); letter-spacing: .5px; }
+.lb-row.lead .lb-name { font-weight: 800; }
+.lb-row.lead .lb-val { color: var(--text); }
 .h2h-vs { font-size: clamp(15px, 4vw, 22px); font-weight: 700; color: var(--muted); flex: none; }
 .h2h-sub { text-align: center; color: var(--muted); font-size: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 
@@ -188,24 +173,15 @@ main.wrap { padding-top: 28px; }
 .report-card:active .report-shuffle { color: var(--accent); }
 .report-insights { display: flex; flex-direction: column; gap: 12px; }
 .ri { display: flex; align-items: flex-start; gap: 9px; }
-.ri .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
-.ri .dot.scott { background: var(--scott); }
-.ri .dot.alvin { background: var(--alvin); }
-.ri .dot.vincent { background: var(--vincent); }
+.ri .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; background: var(--muted); }
 .ri .txt { font-size: 14px; line-height: 1.45; }
 .ri .nm { font-weight: 700; margin-right: 7px; }
-.ri .nm.scott { color: var(--scott); }
-.ri .nm.alvin { color: var(--alvin); }
-.ri .nm.vincent { color: var(--vincent); }
 .ri .msg { color: var(--text); }
 .ri .msg.neutral { color: var(--muted); }
 .report-div { height: 1px; background: var(--border); margin: 16px 0 15px; }
 .report-sched { text-align: center; }
 .sched-label { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 9px; }
 .sched-match { font-family: var(--condensed); font-size: 23px; font-weight: 800; margin-bottom: 10px; letter-spacing: .5px; }
-.sched-match .nm.scott { color: var(--scott); }
-.sched-match .nm.alvin { color: var(--alvin); }
-.sched-match .nm.vincent { color: var(--vincent); }
 .sched-match .vs { color: var(--muted); font-size: 14px; margin: 0 10px; font-weight: 600; }
 .sched-bal { font-size: 12.5px; color: var(--muted); }
 .sched-bal .hl { color: var(--accent); font-weight: 700; }
@@ -371,6 +347,25 @@ table.rank td.name .team-tag { color: var(--muted); font-size: 11px; font-weight
   cursor: pointer; transition: background .18s, color .18s; touch-action: manipulation;
 }
 .toggle button.active { background: var(--accent); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(79,142,247,0.4); }
+
+/* ---------- 運動切換 & NBA 2K ---------- */
+.sport-toggle { margin-bottom: 18px; }
+/* emoji 當圖示：正方形按鈕、字級放大，未選取的降透明度而不是變灰（emoji 本身有顏色） */
+.sport-toggle button {
+  font-size: 24px; line-height: 1; padding: 0; width: 60px; min-height: 44px;
+  opacity: .45; filter: grayscale(0.8); transition: opacity .18s, filter .18s, background .18s;
+}
+.sport-toggle button.active { opacity: 1; filter: none; }
+.nba-detail { padding: 6px 16px 10px; margin-top: 12px; box-shadow: var(--shadow); }
+.nba-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.nba-tbl th { color: var(--text); font-weight: 700; font-size: 14px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+.nba-tbl th.a, .nba-tbl td.a { text-align: left; }
+.nba-tbl th.h, .nba-tbl td.h { text-align: right; }
+.nba-tbl td { padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); color: var(--text); font-variant-numeric: tabular-nums; }
+.nba-tbl tr:last-child td { border-bottom: none; }
+.nba-tbl td.lab { color: var(--muted); text-align: center; font-size: 12px; white-space: nowrap; padding: 7px 10px; }
+.nba-tbl td.better { font-weight: 700; }
+.nba-tbl td.worse { color: var(--muted); }
 .scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 2px 0; display: flex; align-items: center; gap: 5px; }
 
 /* ---------- 對戰篩選 chips ---------- */

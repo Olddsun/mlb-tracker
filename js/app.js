@@ -1,6 +1,39 @@
 /* ============ MLB The Show Tracker — app logic ============ */
 
-const PLAYERS = ['Scott', 'Alvin', 'Vincent'];
+// 玩家清單：從比賽資料動態算出（元老三人固定排前面，之後照字母序），支援未來加入新玩家
+let PLAYERS = [];
+const LEGACY_ORDER = ['Scott', 'Alvin', 'Vincent'];
+function computePlayers() {
+  const inGames = [];
+  DATA.games.forEach(g => g.sides.forEach(s => { if (!inGames.includes(s.player)) inGames.push(s.player); }));
+  const legacy = LEGACY_ORDER.filter(p => inGames.includes(p));
+  const rest = inGames.filter(p => !legacy.includes(p)).sort((a, b) => a.localeCompare(b));
+  PLAYERS = [...legacy, ...rest];
+}
+
+// 玩家代表色：元老三人沿用原色，新玩家依序從備用色盤取
+const PLAYER_BASE_COLORS = { Scott: '#4f8ef7', Alvin: '#f5a524', Vincent: '#34d399' };
+const EXTRA_COLORS = ['#e0454f', '#9b6fc4', '#3bb0c4', '#f4b023', '#fd824a', '#8fd46f', '#d44a9b', '#aab4c0'];
+function playerColor(p) {
+  if (PLAYER_BASE_COLORS[p]) return PLAYER_BASE_COLORS[p];
+  const extras = PLAYERS.filter(x => !PLAYER_BASE_COLORS[x]);
+  const i = extras.indexOf(p);
+  return EXTRA_COLORS[(i >= 0 ? i : 0) % EXTRA_COLORS.length];
+}
+
+// 運動切換：同一個聯盟、兩種運動（mlb / nba2k），所有頁面都只看當前運動的比賽
+let SPORT = localStorage.getItem('esl-sport') || 'mlb';
+function applySportFilter() {
+  DATA.games = (DATA.allGames || []).filter(g => (g.sport || 'mlb') === SPORT);
+  computePlayers();
+}
+function setSport(s) {
+  if (s === SPORT) return;
+  SPORT = s;
+  localStorage.setItem('esl-sport', s);
+  applySportFilter();
+  render();
+}
 
 const MLB_IDS = {"Aaron Judge":592450,"Adolis García":666969,"Adrian Morejon":670970,"Agustín Ramírez":682663,"Alec Bohm":664761,"Alex Bregman":608324,"Alex Freeland":690976,"Andy Pages":681624,"Angel Martinez":682657,"Anthony Bender":669622,"Austin Riley":663586,"Austin Wells":669224,"Ben Williamson":810938,"Blake Treinen":595014,"Bo Naylor":666310,"Brad Keller":641745,"Brandon Marsh":669016,"Brandon Nimmo":607043,"Brayan Rocchio":677587,"Bryce Eldridge":805811,"Bryce Harper":547180,"Bryson Stott":681082,"Caleb Durbin":702332,"Carlos Narváez":665966,"Carson Kelly":608348,"Carson Williams":700246,"Ceddanne Rafaela":678882,"Cedric Mullins":656775,"Chandler Simpson":802415,"Chase DeLauter":800050,"Chris Martin":455119,"Chris Sale":519242,"Christopher Morel":666624,"Cody Bellinger":641355,"Colt Keith":690993,"Connor Norby":681393,"Corey Seager":608369,"Cristopher Sánchez":650911,"Daniel Palencia":694037,"Daniel Schneemann":682177,"Danny Jansen":643376,"Dansby Swanson":621020,"David Fry":681807,"Dillon Dingler":693307,"Dominic Smith":642086,"Drake Baldwin":686948,"Drew Rasmussen":656876,"Erik Sabrowski":681870,"Eury Pérez":691587,"Evan Carter":694497,"Fernando Tatis Jr.":665487,"Freddie Freeman":518692,"Freddy Fermin":666023,"Gabriel Arias":672356,"Garrett Crochet":676979,"Garrett Whitlock":676477,"Giancarlo Stanton":519317,"Gleyber Torres":650402,"Graham Pauley":688363,"Griffin Conine":665052,"Harrison Bader":664056,"Heliot Ramos":671218,"Ian Happ":664023,"Ian Seymour":693855,"J.T. Realmuto":592663,"Jackson Merrill":701538,"Jacob Latz":656641,"Jacob deGrom":594798,"Jake Burger":669394,"Jake Cronenworth":630105,"Jakob Marsee":805300,"Jalen Beeks":656222,"Jarren Duran":680776,"Javier Báez":595879,"Jazz Chisholm Jr.":665862,"Jeremiah Estrada":669093,"Joc Pederson":592626,"Jonathan Aranda":666018,"Jonny DeLuca":676356,"Josh Jung":673962,"Josh Smith":669701,"José Alvarado":621237,"José Caballero":676609,"José Ramírez":608070,"Jung Hoo Lee":808982,"Junior Caminero":691406,"Justin Crawford":702222,"Kerry Carpenter":681481,"Kevin McGonigle":805808,"Kyle Schwarber":656941,"Kyle Tucker":663656,"Logan Webb":657277,"Luis Arraez":650333,"Manny Machado":592518,"Marcelo Mayer":691785,"Matt Chapman":656305,"Matt Olson":621566,"Matthew Boyd":571510,"Mauricio Dubón":643289,"Max Fried":608331,"Max Muncy":571970,"Michael Busch":683737,"Michael Conforto":624424,"Michael Harris II":671739,"Miguel Andujar":609280,"Mike Yastrzemski":573262,"Moisés Ballesteros":694208,"Mookie Betts":605141,"Nick Fortes":663743,"Nick Pivetta":601713,"Nico Hoerner":663538,"Otto Lopez":672640,"Owen Caissie":683357,"Ozzie Albies":645277,"Parker Meadows":678009,"Patrick Bailey":672275,"Paul Goldschmidt":502671,"Pete Crow-Armstrong":691718,"Phil Maton":664208,"Rafael Devers":646240,"Raisel Iglesias":628452,"Ramón Laureano":657656,"Rhys Hoskins":656555,"Riley Greene":682985,"Roman Anthony":701350,"Ronald Acuña Jr.":660670,"Ryan Borucki":621366,"Ryan McMahon":641857,"Sam Haggerty":664059,"Shawn Armstrong":542888,"Shohei Ohtani":660271,"Spencer Torkelson":679529,"Steven Kwan":680757,"Tanner Bibee":676440,"Tarik Skubal":669373,"Teoscar Hernández":606192,"Trea Turner":607208,"Trent Grisham":663757,"Trevor Story":596115,"Ty France":664034,"Tyler Kinley":641755,"Will Smith":669257,"Willson Contreras":575929,"Willy Adames":642715,"Wilyer Abreu":677800,"Wyatt Langford":694671,"Xander Bogaerts":593428,"Xavier Edwards":669364,"Yandy Díaz":650490,"Yoshinobu Yamamoto":808967};
 
@@ -25,7 +58,14 @@ const TEAM_COLORS = {
   'Tigers': '#5b8fd4', 'Twins': '#4f86d6', 'Guardians': '#e0454f',
   'White Sox': '#aab4c0', 'Royals': '#4f86d6', 'Brewers': '#c8a24a',
   'Reds': '#e0454f', 'Pirates': '#f4b023', 'Marlins': '#3bb0c4',
-  'Nationals': '#e0454f', 'Rockies': '#9b6fc4', 'Diamondbacks': '#d44a5a'
+  'Nationals': '#e0454f', 'Rockies': '#9b6fc4', 'Diamondbacks': '#d44a5a',
+  // NBA 2K 隊色（同一張表共用，隊名與 MLB 無撞名）
+  'Knicks': '#f58426', 'Spurs': '#c4ced4', 'Lakers': '#fdb927', 'Celtics': '#3d9f6f', 'Warriors': '#f5b31c',
+  'Bulls': '#ce1141', 'Heat': '#98002e', 'Nets': '#aab4c0', 'Suns': '#e56020', 'Mavericks': '#4f86d6',
+  'Bucks': '#3d9f6f', 'Nuggets': '#fec524', '76ers': '#4f86d6', 'Clippers': '#e0454f', 'Raptors': '#ce1141',
+  'Grizzlies': '#5d76a9', 'Pelicans': '#c8a24a', 'Kings': '#9b6fc4', 'Trail Blazers': '#e03a3e', 'Thunder': '#f4823a',
+  'Timberwolves': '#3bb0c4', 'Cavaliers': '#a5375c', 'Hawks': '#e03a3e', 'Hornets': '#00a8c8', 'Magic': '#4f86d6',
+  'Pistons': '#c8102e', 'Pacers': '#fdbb30', 'Jazz': '#3d9f6f', 'Wizards': '#e0454f', 'Rockets': '#ce1141'
 };
 const teamColor = (t) => TEAM_COLORS[t] || '#4f8ef7';
 
@@ -171,7 +211,6 @@ function standingsCard() {
     return count > 0 ? (type ? 'W' : 'L') + count : '-';
   };
 
-  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
   const fmtPct = (v) => v == null ? '-' : v.toFixed(3).replace(/^0/, '');
   const fmtDiff = (p) => { const d = rs[p] - ra[p]; return d > 0 ? `+${d}` : String(d); };
   const diffCls = (p) => { const d = rs[p] - ra[p]; return d > 0 ? 'diff-pos' : d < 0 ? 'diff-neg' : ''; };
@@ -183,13 +222,13 @@ function standingsCard() {
       <thead><tr>
         <th class="sl">玩家</th>
         <th>W</th><th>L</th><th>PCT</th><th>GB</th><th>STRK</th>
-        <th>RS</th><th>RA</th><th>DIFF</th><th>HOME</th><th>AWAY</th>
+        <th>${SPORT === 'nba2k' ? 'PF' : 'RS'}</th><th>${SPORT === 'nba2k' ? 'PA' : 'RA'}</th><th>DIFF</th><th>HOME</th><th>AWAY</th>
       </tr></thead>
       <tbody>
         ${rows.map(r => {
           const strk = streakStr(r.p);
           return `<tr>
-          <td class="sl"><div class="pl-row"><span class="s-dot ${P_CLR[r.p] || ''}"></span>${esc(r.p)}</div></td>
+          <td class="sl"><div class="pl-row"><span class="s-dot" style="background:${playerColor(r.p)}"></span>${esc(r.p)}</div></td>
           <td>${r.w}</td><td>${r.l}</td>
           <td class="mono">${fmtPct(r.pct)}</td>
           <td class="mono gb">${gbStr(r)}</td>
@@ -210,7 +249,6 @@ function standingsCard() {
 const RECENT_N = 3;                              // 近況取每人最近 N 場
 let lastReportPick = {};                          // 記住每人上一則，避免連按洗牌跳出同一句
 const fmtAvg = (v) => v.toFixed(3).replace(/^0/, '');
-const lc = (p) => p.toLowerCase();               // 玩家名 → 顏色 class（scott/alvin/vincent）
 
 // 某玩家最近 n 場（他有出賽的），DATA.games 為新到舊
 function recentGamesOf(player, n = RECENT_N) {
@@ -392,7 +430,7 @@ function insightCandidates(player, ctx) {
   const st = streakOf(player);
   if (st.streak >= 3) push('streak', st.type === 'w' ? `${st.streak} 連勝，氣勢正旺` : `${st.streak} 連敗，需要止血`, 54 + st.streak);
   if (career[player].mvp >= 2) push('mvp', `已 ${career[player].mvp} 次獲選單場 MVP`, 48);
-  if (rank[player] === 1 && career[player].games >= 3) push('rank', `目前戰績龍頭，三人之首`, 46);
+  if (rank[player] === 1 && career[player].games >= 3) push('rank', `目前戰績龍頭，聯盟之首`, 46);
   if (career[player].hr >= 20) push('milestone', `生涯累積轟破 ${Math.floor(career[player].hr / 10) * 10} 發`, 44);
 
   if (!cands.length) {
@@ -425,14 +463,8 @@ function scheduleSuggestion() {
   return { best: ranked[0], pairs: pairs.map(([x, y]) => ({ x, y, c: count[key(x, y)], k: key(x, y) })) };
 }
 
-function reportCard() {
-  const aggs = {};
-  PLAYERS.forEach(p => aggs[p] = recentAgg(p));
-  const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
-
-  // 每人算出所有候選，加權隨機挑一則（分數越高越常出現），橫向反重複＋避免與上次相同
-  const candsBy = {};
-  PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
+// 每人從候選裡加權隨機挑一則（分數越高越常出現），橫向反重複＋避免與上次相同
+function pickInsights(candsBy) {
   const picked = {};
   const fam = c => (c.cat || '').split('-')[0];   // 大類：bat/pit/drama/h2h/team/streak…
   const weightedPick = (list) => {
@@ -456,12 +488,18 @@ function reportCard() {
     lastReportPick[p] = choice.html;
     if (choice && !choice.neutral) usedFam.add(fam(choice));
   });
+  return picked;
+}
+
+// 戰報卡外殼：兩種運動共用（洞察內容各自產生，賽程建議邏輯相同）
+function renderReportCard(candsBy) {
+  const picked = pickInsights(candsBy);
 
   const insights = PLAYERS.map(p => {
     const ins = picked[p];
     return `<div class="ri">
-        <span class="dot ${lc(p)}"></span>
-        <span class="txt"><span class="nm ${lc(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>
+        <span class="dot" style="background:${playerColor(p)}"></span>
+        <span class="txt"><span class="nm" style="color:${playerColor(p)}">${esc(p)}</span><span class="msg${ins.neutral ? ' neutral' : ''}">${ins.html}</span></span>
       </div>`;
   }).join('');
 
@@ -479,21 +517,43 @@ function reportCard() {
       <div class="report-div"></div>
       <div class="report-sched">
         <div class="sched-label">下一場建議</div>
-        <div class="sched-match"><span class="nm ${lc(s.best.x)}">${esc(s.best.x)}</span><span class="vs">vs</span><span class="nm ${lc(s.best.y)}">${esc(s.best.y)}</span></div>
+        <div class="sched-match"><span class="nm" style="color:${playerColor(s.best.x)}">${esc(s.best.x)}</span><span class="vs">vs</span><span class="nm" style="color:${playerColor(s.best.y)}">${esc(s.best.y)}</span></div>
         <div class="sched-bal">目前場次　${bal}</div>
         <div class="sched-note">${evenNote}</div>
       </div>
     </div>`;
 }
 
+function reportCard() {
+  const aggs = {};
+  PLAYERS.forEach(p => aggs[p] = recentAgg(p));
+  const ctx = { aggs, career: careerStats(), h2h: h2hAll(), teamRec: teamRecordsByPlayer(), rank: rankMap() };
+  const candsBy = {};
+  PLAYERS.forEach(p => candsBy[p] = insightCandidates(p, ctx));
+  return renderReportCard(candsBy);
+}
+
 // 點戰報卡片：純前端重算，只換卡片那塊 DOM（不連網）
 function shuffleReport() {
   const el = document.getElementById('report-card');
-  if (el) el.outerHTML = reportCard();
+  if (el) el.outerHTML = SPORT === 'nba2k' ? nbaReportCard() : reportCard();
 }
 
 function viewHome() {
-  if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄，貼 box score 給 Claude 就會出現在這。</div>`;
+  if (!DATA.games.length) {
+    return `<div class="empty">${SPORT === 'nba2k'
+      ? '還沒有 NBA 2K 對戰紀錄，上傳「球隊比較」截圖就會出現在這。'
+      : '還沒有任何對戰紀錄，貼 box score 給 Claude 就會出現在這。'}</div>`;
+  }
+  if (SPORT === 'nba2k') {
+    return `
+      ${nbaReportCard()}
+      ${standingsCard()}
+      ${nbaCompareCard()}
+      <div class="section-title">近期對戰</div>
+      ${DATA.games.slice(0, 4).map(gameCard).join('')}
+    `;
+  }
   return `
     ${reportCard()}
     ${standingsCard()}
@@ -503,58 +563,264 @@ function viewHome() {
   `;
 }
 
+// 數據排行區塊：每項數據列出全員排行（名字＋長條＋數值），人數多也放得下
+function lbBlocks(statDefs) {
+  return statDefs.map(st => {
+    const ranked = PLAYERS.map(p => ({ p, v: st.val(p) })).filter(r => r.v != null)
+      .sort((a, b) => st.lowerBetter ? a.v - b.v : b.v - a.v);
+    if (!ranked.length) return '';
+
+    const fmt = (v) => (st.dp != null ? v.toFixed(st.dp) : v) + (st.suffix || '');
+    const bestV = ranked[0].v;
+    // 長條：最佳者滿格，其他人相對比例（越低越好的用倒數比）
+    const pct = (v) => {
+      let r;
+      if (st.lowerBetter) r = v > 0 ? (bestV > 0 ? bestV / v : 0) : 1;
+      else r = bestV > 0 ? v / bestV : 0;
+      return Math.max(6, Math.min(100, r * 100));
+    };
+
+    const rows = ranked.map((r, i) => `
+      <div class="lb-row${r.v === bestV ? ' lead' : ''}">
+        <span class="lb-rank mono">${i + 1}</span>
+        <span class="lb-name">${esc(r.p)}</span>
+        <span class="lb-track"><span class="lb-fill" style="width:${pct(r.v).toFixed(1)}%;background:${playerColor(r.p)}"></span></span>
+        <span class="lb-val mono">${fmt(r.v)}</span>
+      </div>`).join('');
+
+    return `<div class="lb-stat">
+        <div class="lb-lab">${st.lab}</div>
+        ${rows}
+      </div>`;
+  }).join('');
+}
+
 function compareCard() {
   const t = playerTotals();
   const eraNum = (p) => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null;
-  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : 0;
-  const P_CLR = ['s', 'a', 'v'];
+  const avgRun = (p) => t[p].games ? t[p].runs / t[p].games : null;
 
   const stats = [
-    { lab: '累積安打', vals: PLAYERS.map(p => t[p].h) },
-    { lab: '累積全壘打', vals: PLAYERS.map(p => t[p].hr) },
-    { lab: '累積三振（投手）', vals: PLAYERS.map(p => t[p].so) },
-    { lab: '平均得分', vals: PLAYERS.map(p => avgRun(p)), dp: 1 },
-    { lab: '團隊 ERA', vals: PLAYERS.map(p => eraNum(p)), dp: 2, lowerBetter: true }
+    { lab: '累積安打', val: p => t[p].h },
+    { lab: '累積全壘打', val: p => t[p].hr },
+    { lab: '累積三振（投手）', val: p => t[p].so },
+    { lab: '平均得分', val: avgRun, dp: 1 },
+    { lab: '團隊 ERA', val: eraNum, dp: 2, lowerBetter: true }
   ];
-
-  const rows = stats.map(st => {
-    const fmt = (v) => v == null ? '—' : (st.dp != null ? v.toFixed(st.dp) : v);
-
-    // 找領先者（有效值中最佳，不並列才標色）
-    const valid = st.vals.map((v, i) => v != null ? { v, i } : null).filter(Boolean);
-    let leaderIdx = -1;
-    if (valid.length > 0) {
-      const best = st.lowerBetter
-        ? valid.reduce((b, c) => c.v < b.v ? c : b)
-        : valid.reduce((b, c) => c.v > b.v ? c : b);
-      if (valid.filter(x => x.v === best.v).length === 1) leaderIdx = best.i;
-    }
-
-    // 長條比例（lowerBetter 用倒數加權）
-    const barW = st.vals.map(v => v == null ? 0 : st.lowerBetter ? (v > 0 ? 1 / v : 0) : v);
-    const total = barW.reduce((s, v) => s + v, 0);
-    const pcts = total > 0 ? barW.map(v => v / total * 100) : barW.map(() => 100 / PLAYERS.length);
-
-    const cols = PLAYERS.map((p, i) => `
-      <div class="cmp-col${leaderIdx === i ? ' lead-' + P_CLR[i] : ''}">
-        <span class="v">${fmt(st.vals[i])}</span>
-        <span class="pname ${P_CLR[i]}">${p}</span>
-      </div>`).join('');
-
-    const segs = PLAYERS.map((p, i) =>
-      `<span class="seg-${P_CLR[i]}" style="width:${pcts[i].toFixed(1)}%"></span>`
-    ).join('');
-
-    return `<div class="cmp-stat">
-        <div class="cmp-lab">${st.lab}</div>
-        <div class="cmp-cols">${cols}</div>
-        <div class="cmp-bar">${segs}</div>
-      </div>`;
-  }).join('');
 
   return `<div class="card compare">
       <div class="cmp-title">數據對比</div>
-      ${rows}
+      ${lbBlocks(stats)}
+    </div>`;
+}
+
+/* ---------- NBA 2K ---------- */
+// 每位玩家的 NBA 累積數據（從 game_sides.stats 彙總）
+function nbaTotals() {
+  const t = {};
+  PLAYERS.forEach(p => t[p] = { games: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, to: 0 });
+  DATA.games.forEach(g => g.sides.forEach(s => {
+    const x = t[s.player]; if (!x) return;
+    const st = s.stats || {};
+    x.games++; x.pts += s.runs;
+    x.ast += st.ast || 0; x.reb += (st.oreb || 0) + (st.dreb || 0);
+    x.stl += st.stl || 0; x.blk += st.blk || 0;
+    x.fgm += st.fgm || 0; x.fga += st.fga || 0; x.tpm += st.tpm || 0; x.tpa += st.tpa || 0;
+    x.to += st.to || 0;
+  }));
+  return t;
+}
+
+function nbaCompareCard() {
+  const t = nbaTotals();
+  const per = (k) => (p) => t[p].games ? t[p][k] / t[p].games : null;
+  const pctOf = (m, a) => (p) => t[p][a] > 0 ? t[p][m] / t[p][a] * 100 : null;
+
+  const stats = [
+    { lab: '平均得分', val: per('pts'), dp: 1 },
+    { lab: '投籃命中率', val: pctOf('fgm', 'fga'), dp: 1, suffix: '%' },
+    { lab: '三分命中率', val: pctOf('tpm', 'tpa'), dp: 1, suffix: '%' },
+    { lab: '場均助攻', val: per('ast'), dp: 1 },
+    { lab: '場均籃板', val: per('reb'), dp: 1 },
+    { lab: '場均抄截', val: per('stl'), dp: 1 },
+    { lab: '場均失誤', val: per('to'), dp: 1, lowerBetter: true },
+  ];
+
+  return `<div class="card compare">
+      <div class="cmp-title">數據對比</div>
+      ${lbBlocks(stats)}
+    </div>`;
+}
+
+// 某玩家近 n 場的籃球彙總
+function nbaRecentAgg(player, n = RECENT_N) {
+  const gs = recentGamesOf(player, n);
+  const a = { games: gs.length, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, to: 0,
+              fgm: 0, fga: 0, tpm: 0, tpa: 0, dunks: 0, wl: [], margins: [] };
+  gs.forEach(g => {
+    const s = sideOf(g, player);
+    const opp = g.sides.find(x => x !== s);
+    const st = s.stats || {};
+    a.pts += s.runs;
+    a.ast += st.ast || 0; a.reb += (st.oreb || 0) + (st.dreb || 0);
+    a.stl += st.stl || 0; a.blk += st.blk || 0; a.to += st.to || 0;
+    a.fgm += st.fgm || 0; a.fga += st.fga || 0; a.tpm += st.tpm || 0; a.tpa += st.tpa || 0;
+    a.dunks += st.dunks || 0;
+    a.wl.push(g.winner === player ? 'w' : 'l');            // 新到舊
+    a.margins.push(s.runs - opp.runs);
+  });
+  const per = v => a.games ? v / a.games : 0;
+  a.ppg = per(a.pts); a.apg = per(a.ast); a.rpg = per(a.reb);
+  a.spg = per(a.stl); a.bpg = per(a.blk); a.topg = per(a.to); a.dpg = per(a.dunks);
+  a.fgPct = a.fga ? a.fgm / a.fga : null;
+  a.tpPct = a.tpa ? a.tpm / a.tpa : null;
+  return a;
+}
+
+// 籃球版戰報規則庫（對應 MLB 的 insightCandidates）
+function nbaInsightCandidates(player, ctx) {
+  const { aggs, h2h, teamRec } = ctx;
+  const a = aggs[player];
+  if (a.games === 0) return [{ cat: 'neutral', html: '近期無出賽', score: 0, neutral: true }];
+  const others = PLAYERS.map(p => aggs[p]).filter(x => x.games > 0);
+  const isMax = (val, sel) => val === Math.max(...others.map(sel));
+  const isMin = (val, sel) => val === Math.min(...others.map(sel));
+  const cands = [];
+  const push = (cat, html, score) => cands.push({ cat, html, score });
+  const pct = v => (v * 100).toFixed(1);
+  const lastG = recentGamesOf(player, 1)[0];
+  const lastSt = lastG ? (sideOf(lastG, player).stats || {}) : null;
+  const lastMargin = a.margins[0];
+
+  /* A 進攻 */
+  if (a.ppg >= 80 && isMax(a.ppg, x => x.ppg)) push('off-pts', `場均 ${a.ppg.toFixed(1)} 分，火力全開 🔥`, 90);
+  if (a.tpPct != null && a.tpa >= 8) {
+    if (a.tpPct >= 0.4 && isMax(a.tpPct, x => x.tpa >= 8 ? x.tpPct : -1)) push('off-3p', `三分命中 ${pct(a.tpPct)}%，外線發燙`, 84);
+    else if (a.tpPct < 0.2 && isMin(a.tpPct, x => x.tpa >= 8 ? x.tpPct : Infinity)) push('off-3p', `三分只有 ${pct(a.tpPct)}%，外線鬧乾旱`, 66);
+  }
+  if (a.fgPct != null && a.fga >= 20 && a.fgPct >= 0.55 && isMax(a.fgPct, x => x.fga >= 20 ? x.fgPct : -1)) push('off-fg', `投籃命中 ${pct(a.fgPct)}%，出手就進`, 80);
+  if (a.apg >= 20 && isMax(a.apg, x => x.apg)) push('off-ast', `場均 ${a.apg.toFixed(1)} 次助攻，傳導無私`, 74);
+  if (a.dpg >= 6 && isMax(a.dpg, x => x.dpg)) push('off-dunk', `場均 ${a.dpg.toFixed(1)} 次灌籃，直接扣爛籃框`, 70);
+
+  /* B 防守與籃板 */
+  if (a.rpg >= 25 && isMax(a.rpg, x => x.rpg)) push('def-reb', `場均 ${a.rpg.toFixed(1)} 籃板，禁區之王`, 76);
+  if (a.spg >= 5 && isMax(a.spg, x => x.spg)) push('def-stl', `場均 ${a.spg.toFixed(1)} 次抄截，雙手黏球`, 72);
+  if (a.bpg >= 3 && isMax(a.bpg, x => x.bpg)) push('def-blk', `場均 ${a.bpg.toFixed(1)} 次火鍋，禁區關門`, 68);
+
+  /* C 失誤 */
+  if (a.topg >= 10 && isMax(a.topg, x => x.topg)) push('to', `場均 ${a.topg.toFixed(1)} 次失誤，球先顧好`, 62);
+  else if (a.topg <= 5 && isMin(a.topg, x => x.topg)) push('to', `場均只失誤 ${a.topg.toFixed(1)} 次，控球穩健`, 56);
+
+  /* D 戲劇性（最近一場） */
+  if (lastMargin != null) {
+    if (lastMargin >= 25) push('drama', `上場海放對手 ${lastMargin} 分`, 86);
+    else if (lastMargin <= -25) push('drama-bad', `上場被血洗 ${Math.abs(lastMargin)} 分`, 64);
+    else if (lastMargin > 0 && lastMargin <= 3) push('drama', `上場 ${lastMargin} 分之差驚險守住`, 78);
+    else if (lastMargin < 0 && lastMargin >= -3) push('drama-bad', `上場只差 ${Math.abs(lastMargin)} 分飲恨`, 60);
+  }
+  if (lastSt && (lastSt.fastbreak ?? 0) >= 20) push('drama', `上場快攻拿下 ${lastSt.fastbreak} 分，跑轟成功`, 66);
+  if (lastSt && (lastSt.paint ?? 0) >= 50) push('drama', `上場禁區狂灌 ${lastSt.paint} 分`, 64);
+  if (lastSt && (lastSt.bench ?? 0) >= 25) push('drama', `上場板凳貢獻 ${lastSt.bench} 分，替補發威`, 58);
+
+  /* E 關係・選隊・連勝 */
+  for (const o of PLAYERS) {
+    if (o === player) continue;
+    const rec = h2h[player]?.[o];
+    if (rec && rec.type === 'w' && rec.streak >= 3) push('h2h', `是 ${o} 的苦主，對戰 ${rec.streak} 連勝`, 76);
+    else if (rec && rec.w >= 2 && rec.w === rec.l) push('h2h', `與 ${o} 交手 ${rec.w + rec.l} 場各半，難分高下`, 50);
+  }
+  (teamRec[player] || []).forEach(tr => {
+    if (tr.gp >= 2 && tr.w === tr.gp) push('team', `用 ${tr.team} ${tr.gp} 戰全勝，勝利方程式`, 67);
+    else if (tr.gp >= 2 && tr.w === 0) push('team', `用 ${tr.team} 老是輸，考慮換隊`, 57);
+  });
+  const st = streakOf(player);
+  if (st.streak >= 3) push('streak', st.type === 'w' ? `${st.streak} 連勝，氣勢正旺` : `${st.streak} 連敗，需要止血`, 54 + st.streak);
+
+  if (!cands.length) {
+    const w = a.wl.filter(x => x === 'w').length;
+    return [{ cat: 'neutral', html: `近 ${a.games} 場 ${w} 勝 ${a.games - w} 敗，場均 ${a.ppg.toFixed(1)} 分`, score: 0, neutral: true }];
+  }
+  cands.sort((x, y) => y.score - x.score);
+  return cands;
+}
+
+function nbaReportCard() {
+  const aggs = {};
+  PLAYERS.forEach(p => aggs[p] = nbaRecentAgg(p));
+  const ctx = { aggs, h2h: h2hAll(), teamRec: teamRecordsByPlayer() };
+  const candsBy = {};
+  PLAYERS.forEach(p => candsBy[p] = nbaInsightCandidates(p, ctx));
+  return renderReportCard(candsBy);
+}
+
+// NBA 2K 球隊數據列定義（單場對照表用；lower = 越低越好、neutral = 不比較）
+const NBA_ROWS = [
+  { k: 'fg', lab: '投籃命中', fmt: s => nbaShoot(s.fgm, s.fga) },
+  { k: 'tp', lab: '三分球', fmt: s => nbaShoot(s.tpm, s.tpa) },
+  { k: 'ft', lab: '罰球', fmt: s => nbaShoot(s.ftm, s.fta) },
+  { k: 'fastbreak', lab: '快攻得分' },
+  { k: 'paint', lab: '禁區內得分' },
+  { k: 'second_chance', lab: '二次進攻得分' },
+  { k: 'bench', lab: '板凳球員得分' },
+  { k: 'ast', lab: '助攻' },
+  { k: 'oreb', lab: '進攻籃板' },
+  { k: 'dreb', lab: '防守籃板' },
+  { k: 'stl', lab: '抄截' },
+  { k: 'blk', lab: '阻攻' },
+  { k: 'to', lab: '失誤（對手得分）', fmt: s => `${s.to ?? 0}（${s.to_points ?? 0}）`, lower: true },
+  { k: 'fouls', lab: '球隊犯規', lower: true },
+  { k: 'dunks', lab: '灌籃' },
+  { k: 'biggest_lead', lab: '最大領先' },
+  { k: 'possession', lab: '持球時間', neutral: true },
+  { k: 'timeouts', lab: '剩餘暫停數', neutral: true },
+];
+const nbaShoot = (m, a) => (m == null && a == null) ? '—' : `${m ?? 0}/${a ?? 0}（${a ? Math.round((m ?? 0) / a * 100) : 0}%）`;
+
+function nbaRowsHtml(away, home) {
+  const num = (s, r) => r.k === 'fg' ? (s.fgm ?? null) : r.k === 'tp' ? (s.tpm ?? null) : r.k === 'ft' ? (s.ftm ?? null) : (typeof s[r.k] === 'number' ? s[r.k] : null);
+  return NBA_ROWS.map(r => {
+    const av = r.fmt ? r.fmt(away) : (away[r.k] ?? '—');
+    const hv = r.fmt ? r.fmt(home) : (home[r.k] ?? '—');
+    let aCls = '', hCls = '';
+    if (!r.neutral) {
+      const an = num(away, r), hn = num(home, r);
+      if (an != null && hn != null && an !== hn) {
+        const aBetter = r.lower ? an < hn : an > hn;
+        aCls = aBetter ? ' better' : ' worse'; hCls = aBetter ? ' worse' : ' better';
+      }
+    }
+    return `<tr><td class="a${aCls}">${esc(av)}</td><td class="lab">${r.lab}</td><td class="h${hCls}">${esc(hv)}</td></tr>`;
+  }).join('');
+}
+
+// NBA 2K 單場詳情：兩隊整場數據對照
+function viewGameNba(g) {
+  const ordered = [...g.sides].sort((a, b) => a.homeAway === 'away' ? -1 : 1);
+  const [away, home] = ordered;
+  const awayWon = g.winner === away.player;
+
+  const headLine = (s) => `<div class="dh-line ${g.winner === s.player ? 'win' : ''}">
+      <span class="tcolor" style="background:${teamColor(s.team)}"></span>
+      <span class="lbl"><span class="pl">${esc(s.player)}</span><span class="tm">${esc(s.teamFull || s.team)}</span></span>
+      <span class="runs mono">${s.runs}</span>
+    </div>`;
+
+  return `
+    <div class="detail-top">
+      <div class="back" onclick="history.back()">← 返回</div>
+      <button class="del-btn" onclick="confirmDeleteGame('${g.id}')" aria-label="刪除這場比賽" title="刪除這場比賽">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+    </div>
+    <div class="card detail-head">${ordered.map(headLine).join('')}</div>
+    <div class="card nba-detail">
+      <table class="nba-tbl">
+        <thead><tr><th class="a">${esc(away.team)}</th><th class="lab"></th><th class="h">${esc(home.team)}</th></tr></thead>
+        <tbody>
+          <tr><td class="a${awayWon ? ' better' : ' worse'}">${away.runs}</td><td class="lab">得分</td><td class="h${awayWon ? ' worse' : ' better'}">${home.runs}</td></tr>
+          ${nbaRowsHtml(away.stats || {}, home.stats || {})}
+        </tbody>
+      </table>
     </div>`;
 }
 
@@ -580,13 +846,15 @@ let gamesFilter = null; // null = 全部，或 ['Scott','Alvin'] 等
 function viewGames() {
   if (!DATA.games.length) return `<div class="empty">還沒有任何對戰紀錄。</div>`;
 
-  // 找出實際存在的對戰組合
-  const pairs = [
-    ['Scott','Alvin'], ['Scott','Vincent'], ['Alvin','Vincent']
-  ].filter(([a, b]) => DATA.games.some(g => {
-    const ps = g.sides.map(s => s.player);
-    return ps.includes(a) && ps.includes(b);
-  }));
+  // 找出實際存在的對戰組合（動態，依 PLAYERS 順序排）
+  const seen = new Map();
+  DATA.games.forEach(g => {
+    if (g.sides.length !== 2) return;
+    const [a, b] = [...g.sides.map(s => s.player)].sort((x, y) => PLAYERS.indexOf(x) - PLAYERS.indexOf(y));
+    seen.set(a + '|' + b, [a, b]);
+  });
+  const pairs = [...seen.values()].sort((p1, p2) =>
+    PLAYERS.indexOf(p1[0]) - PLAYERS.indexOf(p2[0]) || PLAYERS.indexOf(p1[1]) - PLAYERS.indexOf(p2[1]));
 
   const filtered = gamesFilter
     ? DATA.games.filter(g => {
@@ -608,8 +876,9 @@ function viewGames() {
 function setGamesFilter(f) { gamesFilter = f; render(); }
 
 function viewGame(id) {
-  const g = DATA.games.find(x => x.id === id);
+  const g = (DATA.allGames || DATA.games).find(x => x.id === id);
   if (!g) return `<div class="empty">找不到這場比賽。</div>`;
+  if ((g.sport || 'mlb') === 'nba2k') return viewGameNba(g);
   const ordered = [...g.sides].sort((a, b) => a.homeAway === 'away' ? -1 : 1);
 
   const headLine = (s) => `<div class="dh-line ${g.winner === s.player ? 'win' : ''}">
@@ -715,8 +984,9 @@ function confirmDeleteGame(id) {
       });
       if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || '刪除失敗'); }
       close();
-      DATA.games = DATA.games.filter(x => x.id !== id);         // 先本地移除
-      try { const r = await fetch('/api/games'); DATA = await r.json(); } catch { /* 用本地資料即可 */ }
+      DATA.allGames = (DATA.allGames || DATA.games).filter(x => x.id !== id);   // 先本地移除
+      try { const r = await fetch('/api/games'); DATA = await r.json(); DATA.allGames = DATA.games; } catch { /* 用本地資料即可 */ }
+      applySportFilter();
       if (location.hash === '#/' || location.hash === '') render();   // 已在首頁：直接重繪
       else location.hash = '#/';                                 // 否則導回首頁（觸發一次 render）
     } catch (err) {
@@ -726,7 +996,6 @@ function confirmDeleteGame(id) {
   };
 }
 
-const P_DOT_CLS = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
 const chevronSvg = `<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
 function viewTeams() {
@@ -736,7 +1005,6 @@ function viewTeams() {
 
   const section = (player, idx) => {
     const recs = byPlayer[player] || [];
-    const dotCls = P_DOT_CLS[player] || '';
     const content = recs.length
       ? `<div class="tbl-card"><div class="tbl-scroll"><table class="rank">
           <thead><tr><th class="l">隊伍</th><th>場次</th><th>勝</th><th>敗</th><th>勝率</th><th>得分</th><th>失分</th></tr></thead>
@@ -751,7 +1019,7 @@ function viewTeams() {
 
     return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
       <summary class="player-section-hd">
-        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+        <span class="s-dot" style="background:${playerColor(player)}"></span>${esc(player)}${chevronSvg}
       </summary>
       ${content}
     </details>`;
@@ -762,6 +1030,7 @@ function viewTeams() {
 
 let playerTab = 'bat';
 function viewPlayers() {
+  if (SPORT === 'nba2k') return `<div class="empty">NBA 2K 記錄的是球隊整場數據，沒有個別球員成績；數據看總覽排行或點進單場對照。</div>`;
   const bat = battingByOwner(), pit = pitchingByOwner();
   const hasAny = PLAYERS.some(p => bat[p]?.length || pit[p]?.length);
   if (!hasAny) return `<div class="empty">還沒有球員資料。</div>`;
@@ -792,14 +1061,13 @@ function viewPlayers() {
 
   const section = (player, idx) => {
     const rows = playerTab === 'bat' ? (bat[player] || []) : (pit[player] || []);
-    const dotCls = P_DOT_CLS[player] || '';
     const content = rows.length
       ? (playerTab === 'bat' ? batTable(rows) : pitTable(rows))
       : `<div class="empty">還沒有 ${esc(player)} 的${playerTab === 'bat' ? '打擊' : '投球'}資料。</div>`;
 
     return `<details class="player-section" ${idx === 0 ? 'open' : ''}>
       <summary class="player-section-hd">
-        <span class="s-dot ${dotCls}"></span>${esc(player)}${chevronSvg}
+        <span class="s-dot" style="background:${playerColor(player)}"></span>${esc(player)}${chevronSvg}
       </summary>
       ${content}
     </details>`;
@@ -816,7 +1084,6 @@ function setPlayerTab(t) { playerTab = t; render(); }
 /* ---------- Player detail modal ---------- */
 function showPlayer(name) {
   const bat = battingByOwner(), pit = pitchingByOwner();
-  const P_CLR = { Scott: 'scott', Alvin: 'alvin', Vincent: 'vincent' };
 
   const batRows = PLAYERS.map(p => ({ owner: p, d: bat[p]?.find(b => b.name === name) })).filter(x => x.d);
   const pitRows = PLAYERS.map(p => ({ owner: p, d: pit[p]?.find(b => b.name === name) })).filter(x => x.d);
@@ -829,7 +1096,7 @@ function showPlayer(name) {
 
   const ownerBlock = (owner, stats, fields) => `
     <div class="pm-owner-block">
-      <div class="pm-owner-label"><span class="s-dot ${P_CLR[owner] || ''}"></span>${esc(owner)}</div>
+      <div class="pm-owner-label"><span class="s-dot" style="background:${playerColor(owner)}"></span>${esc(owner)}</div>
       <div class="pm-stats-grid">
         ${fields.map(f => `<div class="pm-stat"><span class="pm-v">${f.v(stats)}</span><span class="pm-l">${f.l}</span></div>`).join('')}
       </div>
@@ -891,7 +1158,14 @@ function render() {
   else if (parts[0] === 'players') { html = viewPlayers(); route = 'players'; }
   else { html = viewHome(); route = 'home'; }
 
-  app().innerHTML = html;
+  // 運動切換列（單場詳情頁不顯示）
+  const isDetail = parts[0] === 'game' && parts[1];
+  const sportToggle = isDetail ? '' : `<div class="toggle sport-toggle">
+      <button class="${SPORT === 'mlb' ? 'active' : ''}" onclick="setSport('mlb')" title="MLB The Show" aria-label="切換到棒球 MLB The Show">⚾</button>
+      <button class="${SPORT === 'nba2k' ? 'active' : ''}" onclick="setSport('nba2k')" title="NBA 2K" aria-label="切換到籃球 NBA 2K">🏀</button>
+    </div>`;
+
+  app().innerHTML = sportToggle + html;
   document.querySelectorAll('nav a[data-route]').forEach(a => a.classList.toggle('active', a.dataset.route === route));
   window.scrollTo(0, 0);
 }
@@ -902,6 +1176,8 @@ async function refreshApp() {
   try {
     const res = await fetch('/api/games');
     DATA = await res.json();
+    DATA.allGames = DATA.games;
+    applySportFilter();
     render();
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
@@ -913,6 +1189,8 @@ async function boot() {
   try {
     const res = await fetch('/api/games');
     DATA = await res.json();
+    DATA.allGames = DATA.games;
+    applySportFilter();
   } catch (e) {
     app().innerHTML = `<div class="empty">資料載入失敗：${esc(e.message)}</div>`;
     return;

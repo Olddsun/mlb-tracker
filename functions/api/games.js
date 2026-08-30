@@ -14,14 +14,16 @@ export async function onRequest(context) {
     'Content-Type': 'application/json',
   }
 
-  // 一次 query 取回所有資料（PostgREST 巢狀 select）
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/games` +
-    `?select=*,game_sides(*,batting_lines(*),pitching_lines(*)),game_notes(*)` +
-    `&sport=eq.mlb` +
-    `&order=played_at.desc,legacy_id.desc`,
-    { headers }
-  )
+  // 一次 query 取回所有資料（PostgREST 巢狀 select）＋玩家表（顯示名對照）
+  const [res, playersRes] = await Promise.all([
+    fetch(
+      `${SUPABASE_URL}/rest/v1/games` +
+      `?select=*,game_sides(*,batting_lines(*),pitching_lines(*)),game_notes(*)` +
+      `&order=played_at.desc,legacy_id.desc`,
+      { headers }
+    ),
+    fetch(`${SUPABASE_URL}/rest/v1/players?select=id,display_name&order=id.asc`, { headers }),
+  ])
 
   if (!res.ok) {
     const err = await res.text()
@@ -29,6 +31,8 @@ export async function onRequest(context) {
   }
 
   const rows = await res.json()
+  const playerRows = playersRes.ok ? await playersRes.json() : []
+  const nameOf = (id) => playerRows.find(p => p.id === id)?.display_name || capitalize(id)
 
   const games = rows.map(game => {
     // game_notes HR → player name 計數 map（AI 提交時 batting_lines.hr 為 0，從這裡補）
@@ -41,7 +45,7 @@ export async function onRequest(context) {
     const sides = [...game.game_sides]
       .sort((a, b) => (a.home_away === 'away' ? -1 : 1))
       .map(side => ({
-        player:   capitalize(side.player_id),
+        player:   nameOf(side.player_id),
         team:     side.team_name,
         teamFull: side.team_full,
         homeAway: side.home_away,
@@ -49,6 +53,7 @@ export async function onRequest(context) {
         hits:     side.hits,
         errors:   side.errors,
         innings:  side.innings,
+        stats:    side.stats || null,   // NBA 2K 球隊整場數據（MLB 為 null）
         batting: [...side.batting_lines]
           .sort((a, b) => a.batting_order - b.batting_order)
           .map(b => {
@@ -74,8 +79,9 @@ export async function onRequest(context) {
 
     return {
       id:     game.id,          // 一律用真正的 UUID（原本對匯入資料回傳 legacy_id，導致刪除失敗）
+      sport:  game.sport || 'mlb',
       date:   game.played_at,
-      winner: capitalize(game.winner_player_id),
+      winner: nameOf(game.winner_player_id),
       playerOfGame: game.player_of_game_name
         ? { name: game.player_of_game_name, team: game.player_of_game_team }
         : null,
@@ -85,7 +91,7 @@ export async function onRequest(context) {
   })
 
   return new Response(
-    JSON.stringify({ players: ['Scott', 'Alvin', 'Vincent'], games }),
+    JSON.stringify({ players: playerRows.map(p => p.display_name), games }),
     { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
   )
 }
