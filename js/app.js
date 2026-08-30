@@ -604,34 +604,47 @@ function lbBlocks(statDefs) {
   }).join('');
 }
 
-// 一組數據（累積／場均）＝小標題 + 若干排行區塊
-function lbGroup(title, statDefs) {
-  const body = lbBlocks(statDefs);
-  return body ? `<div class="lb-group"><div class="lb-group-hd">${title}</div>${body}</div>` : '';
+// 數據對比卡：累積／場均用卡片頂部的切換鈕換，一次只顯示一組
+let compareMode = 'total';   // 'total' | 'avg'
+
+function renderCompareCard(totalStats, avgStats) {
+  const seg = (mode, label) =>
+    `<button type="button" role="tab" aria-selected="${compareMode === mode}"
+             onclick="setCompareMode('${mode}')">${label}</button>`;
+  return `<div class="card compare" id="compare-card">
+      <div class="cmp-head">
+        <span class="cmp-title">數據對比</span>
+        <div class="cmp-seg" role="tablist" aria-label="切換累積或場均數據">
+          ${seg('total', '累積')}${seg('avg', '場均')}
+        </div>
+      </div>
+      ${lbBlocks(compareMode === 'avg' ? avgStats : totalStats)}
+    </div>`;
+}
+
+// 只換卡片那塊 DOM，避免整頁重繪讓捲動位置跳掉
+function setCompareMode(m) {
+  if (m === compareMode) return;
+  compareMode = m;
+  const el = document.getElementById('compare-card');
+  if (el) el.outerHTML = SPORT === 'nba2k' ? nbaCompareCard() : compareCard();
 }
 
 function compareCard() {
   const t = playerTotals();
   const per = (k) => (p) => t[p].games ? t[p][k] / t[p].games : null;
 
-  const cumulative = [
+  return renderCompareCard([
     { lab: '安打', val: p => t[p].h },
     { lab: '全壘打', val: p => t[p].hr },
     { lab: '打點', val: p => t[p].rbi },
     { lab: '三振（投手）', val: p => t[p].so },
-  ];
-  const perGame = [
+  ], [
     { lab: '打擊率', val: p => t[p].ab ? t[p].h / t[p].ab : null, fmt: v => v.toFixed(3).replace(/^0/, '') },
     { lab: '場均得分', val: per('runs'), dp: 1 },
     { lab: '場均全壘打', val: per('hr'), dp: 1 },
     { lab: '團隊 ERA', val: p => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null, dp: 2, lowerBetter: true },
-  ];
-
-  return `<div class="card compare">
-      <div class="cmp-title">數據對比</div>
-      ${lbGroup('累積數據', cumulative)}
-      ${lbGroup('場均數據', perGame)}
-    </div>`;
+  ]);
 }
 
 /* ---------- NBA 2K ---------- */
@@ -656,26 +669,19 @@ function nbaCompareCard() {
   const per = (k) => (p) => t[p].games ? t[p][k] / t[p].games : null;
   const pctOf = (m, a) => (p) => t[p][a] > 0 ? t[p][m] / t[p][a] * 100 : null;
 
-  const cumulative = [
+  return renderCompareCard([
     { lab: '得分', val: p => t[p].pts },
     { lab: '助攻', val: p => t[p].ast },
     { lab: '籃板', val: p => t[p].reb },
     { lab: '抄截', val: p => t[p].stl },
-  ];
-  const perGame = [
+  ], [
     { lab: '投籃命中率', val: pctOf('fgm', 'fga'), dp: 1, suffix: '%' },
     { lab: '三分命中率', val: pctOf('tpm', 'tpa'), dp: 1, suffix: '%' },
     { lab: '場均得分', val: per('pts'), dp: 1 },
     { lab: '場均助攻', val: per('ast'), dp: 1 },
     { lab: '場均籃板', val: per('reb'), dp: 1 },
     { lab: '場均失誤', val: per('to'), dp: 1, lowerBetter: true },
-  ];
-
-  return `<div class="card compare">
-      <div class="cmp-title">數據對比</div>
-      ${lbGroup('累積數據', cumulative)}
-      ${lbGroup('場均數據', perGame)}
-    </div>`;
+  ]);
 }
 
 // 某玩家近 n 場的籃球彙總
