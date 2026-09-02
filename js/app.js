@@ -582,24 +582,26 @@ function lbBlocks(statDefs) {
 
     const fmt = (v) => st.fmt ? st.fmt(v) : (st.dp != null ? v.toFixed(st.dp) : v) + (st.suffix || '');
     const bestV = ranked[0].v;
-    // 長條：最佳者滿格，其他人相對比例（越低越好的用倒數比）
-    const pct = (v) => {
-      let r;
-      if (st.lowerBetter) r = v > 0 ? (bestV > 0 ? bestV / v : 0) : 1;
-      else r = bestV > 0 ? v / bestV : 0;
-      return Math.max(6, Math.min(100, r * 100));
+    // 與第 1 名的差距，用跟數值同一種格式；越低越好的項目落後是「+」（失得更多）
+    const gap = (v) => {
+      const d = Math.abs(v - bestV);
+      if (!d) return '';
+      return (st.lowerBetter ? '+' : '−') + fmt(d);
     };
 
     const rows = ranked.map((r, i) => `
       <div class="lb-row${r.v === bestV ? ' lead' : ''}">
         <span class="lb-rank mono">${i + 1}</span>
+        <span class="lb-dot" style="background:${playerColor(r.p)}"></span>
         <span class="lb-name">${esc(r.p)}</span>
-        <span class="lb-track"><span class="lb-fill" style="width:${pct(r.v).toFixed(1)}%;background:${playerColor(r.p)}"></span></span>
+        <span class="lb-gap mono">${r.v === bestV
+          ? `<span class="lb-badge">${st.lowerBetter ? '最低' : '領先'}</span>`
+          : gap(r.v)}</span>
         <span class="lb-val mono">${fmt(r.v)}</span>
       </div>`).join('');
 
     return `<div class="lb-stat">
-        <div class="lb-lab">${st.lab}</div>
+        <div class="lb-lab">${st.lab}${st.lowerBetter ? '（越低越好）' : ''}</div>
         ${rows}
       </div>`;
   }).join('');
