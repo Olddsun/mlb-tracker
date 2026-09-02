@@ -65,7 +65,10 @@ async function parsePhase(context) {
   // ── 同步解析後存起來、回傳給前端審核（尚未寫入正式資料，等使用者指定玩家＋確認）
   const result = await processGame(env, submissionId, imageBuffers)
   if (!result.ok) return json({ status: 'failed', error: result.error })
-  return json({ status: 'parsed', submissionId, game: result.game, duplicates: result.duplicates, needsReview: result.needsReview })
+  return json({
+    status: 'parsed', submissionId, game: result.game, duplicates: result.duplicates,
+    needsReview: result.needsReview, uncertainties: result.uncertainties,
+  })
 }
 
 // ── 階段二：使用者確認後，把已解析的結果寫入正式資料 ────────────────
@@ -176,7 +179,11 @@ async function processGame(env, submissionId, imageBuffers) {
       team_b: parsed.away_team,
     })
 
-    return { ok: true, game: toDisplayGame(parsed), duplicates, needsReview: parsed.needsReview ?? false }
+    return {
+      ok: true, game: toDisplayGame(parsed), duplicates,
+      needsReview: parsed.needsReview ?? false,
+      uncertainties: Array.isArray(parsed.uncertainties) ? parsed.uncertainties : [],
+    }
   } catch (e) {
     await failSub(SUPABASE_URL, sbHeaders, submissionId, e.message)
     return { ok: false, error: e.message }
@@ -217,8 +224,23 @@ async function parseWithModel(env, model, imageBase64s, imageCount) {
 
 【逐局比分 line_score】
 - 上面那隊是客隊(away)、下面那隊是主隊(home)。
-- ⚠️ 逐局那排最左邊的「第 1 局」常被隊名面板擋住 —— R（總分）才是準的。把讀到的各局加起來若小於 R，差額就是被擋住的局（通常在第 1 局）；務必讓逐局加總 = R。
-- 可能是延長賽（超過 9 局），有幾欄就讀幾欄。主隊贏球沒打下半局會顯示 "X"。
+- 可能是延長賽（超過 9 局），有幾欄就讀幾欄。主隊贏球沒打下半局會顯示 "X"（當 0 算）。
+- ⚠️ 逐局那排最左邊的「第 1 局」常被隊名面板擋住 —— R（總分）才是準的。
+
+★ 記錄比分前，兩隊都要各做一次「累計驗算」，這是最重要的一步：
+  1. 從第 1 局開始，逐局把該局得分往後累加，寫出每一局結束時的累計分數。
+     例：逐局 0,2,0,1 → 累計 0,2,2,3。
+  2. 最後一局的累計分數，必須等於該隊 R 欄的總分。
+  3. 對得上 → 這隊的逐局與總分都可信，照讀到的填。
+  4. 對不上 →
+     - 累計「小於」R：代表有某一局沒讀到（最常見是被隊名面板擋住的第 1 局）。
+       回頭把每一局重看一次，確認到底是哪一局漏掉、補上正確的數字，讓累計 = R。
+       真的看不出是哪一局，才把差額補在第 1 局，並設 needsReview: true、
+       在 uncertainties 寫「第 X 局被擋住，用總分回推」。
+     - 累計「大於」R：代表某一局讀多了（常見是把兩位數看錯、或欄位對錯格）。
+       務必回頭重讀，不可以直接改 R 去遷就，也不可以隨便刪掉某局的分數。
+  5. 兩隊各自都要通過這個驗算，才可以輸出 innings 與 home_score / away_score。
+- 交叉檢查：勝負要與 R 一致；投手表每隊的失分(R)加總，也要等於對手的總分。三者對不上就重讀。
 
 【打擊表 batting】欄位固定為 AB、R、H、RBI、BB、SO、AVG，逐欄對齊讀。最下方 TOTALS 列是對帳基準：各打者 H 加總要等於 TOTALS 的 H、R 加總等於 TOTALS 的 R，不符就重讀。
 - ⚠️ 打擊表沒有 HR 欄位！全壘打要從表格下方「BATTING」區塊的「HR:」那行讀：列出的每個名字算 1 轟，同一名字出現多次或標「名字 2」就是多轟，據此填該打者的 hr。沒列到的人 hr = 0。
@@ -303,6 +325,12 @@ function reconcileInnings(p) {
     if (diff > 0) {
       const first = parseInt(innings[0])
       innings[0] = String((isNaN(first) ? 0 : first) + diff)   // 差額補回第 1 局
+      // 補值等於「累計驗算沒過、由程式回推」，要讓使用者知道並核對，不能靜靜改掉
+      p.needsReview = true
+      p.uncertainties = [
+        ...(Array.isArray(p.uncertainties) ? p.uncertainties : []),
+        `${side === 'home' ? '主隊' : '客隊'}逐局加總比總分少 ${diff} 分，已把差額補在第 1 局，請對照截圖確認`,
+      ]
     }
   }
 }

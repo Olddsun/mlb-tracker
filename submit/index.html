@@ -418,7 +418,10 @@ function showReview(data) {
   currentSubmissionId = data.submissionId
   const g = data.game
   const warns = []
-  if (data.needsReview) warns.push('AI 對部分數據不太確定，請仔細核對')
+  // AI 自己標出的疑慮（例如逐局加總對不上總分、某局被面板擋住）逐條列出來，比一句籠統提醒有用
+  const notes = Array.isArray(data.uncertainties) ? data.uncertainties.filter(Boolean) : []
+  if (notes.length) warns.push(...notes)
+  else if (data.needsReview) warns.push('AI 對部分數據不太確定，請仔細核對')
   if ((data.duplicates?.length ?? 0) > 0) warns.push('這場好像記過了（今天已有同兩隊的比賽紀錄）')
 
   const awayWon = g.awayScore > g.homeScore
