@@ -111,10 +111,11 @@ function recentForm(player, n = 5) {
 // 每位玩家的累積數據（只計有逐場數據的比賽）
 function playerTotals() {
   const t = {};
-  PLAYERS.forEach(p => t[p] = { h: 0, ab: 0, hr: 0, rbi: 0, so: 0, runs: 0, games: 0, er: 0, outs: 0 });
+  PLAYERS.forEach(p => t[p] = { h: 0, ab: 0, hr: 0, rbi: 0, so: 0, runs: 0, ra: 0, games: 0, er: 0, outs: 0 });
   DATA.games.forEach(g => g.sides.forEach(s => {
     const x = t[s.player]; if (!x) return;
     x.games++; x.runs += s.runs;
+    x.ra += g.sides.find(o => o !== s)?.runs ?? 0;      // 失分＝對手得分
     s.batting.forEach(b => { x.h += b.h || 0; x.ab += b.ab || 0; x.hr += b.hr || 0; x.rbi += b.rbi || 0; });
     s.pitching.forEach(p => { x.so += p.so || 0; x.er += p.er || 0; x.outs += ipToOuts(p.ip); });
   }));
@@ -642,6 +643,7 @@ function compareCard() {
   ], [
     { lab: '打擊率', val: p => t[p].ab ? t[p].h / t[p].ab : null, fmt: v => v.toFixed(3).replace(/^0/, '') },
     { lab: '場均得分', val: per('runs'), dp: 1 },
+    { lab: '場均失分', val: per('ra'), dp: 1, lowerBetter: true },
     { lab: '場均全壘打', val: per('hr'), dp: 1 },
     { lab: '團隊 ERA', val: p => t[p].outs > 0 ? t[p].er * 27 / t[p].outs : null, dp: 2, lowerBetter: true },
   ]);
@@ -651,11 +653,12 @@ function compareCard() {
 // 每位玩家的 NBA 累積數據（從 game_sides.stats 彙總）
 function nbaTotals() {
   const t = {};
-  PLAYERS.forEach(p => t[p] = { games: 0, pts: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, to: 0 });
+  PLAYERS.forEach(p => t[p] = { games: 0, pts: 0, pa: 0, ast: 0, reb: 0, stl: 0, blk: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, to: 0 });
   DATA.games.forEach(g => g.sides.forEach(s => {
     const x = t[s.player]; if (!x) return;
     const st = s.stats || {};
     x.games++; x.pts += s.runs;
+    x.pa += g.sides.find(o => o !== s)?.runs ?? 0;      // 失分＝對手得分
     x.ast += st.ast || 0; x.reb += (st.oreb || 0) + (st.dreb || 0);
     x.stl += st.stl || 0; x.blk += st.blk || 0;
     x.fgm += st.fgm || 0; x.fga += st.fga || 0; x.tpm += st.tpm || 0; x.tpa += st.tpa || 0;
@@ -678,6 +681,7 @@ function nbaCompareCard() {
     { lab: '投籃命中率', val: pctOf('fgm', 'fga'), dp: 1, suffix: '%' },
     { lab: '三分命中率', val: pctOf('tpm', 'tpa'), dp: 1, suffix: '%' },
     { lab: '場均得分', val: per('pts'), dp: 1 },
+    { lab: '場均失分', val: per('pa'), dp: 1, lowerBetter: true },
     { lab: '場均助攻', val: per('ast'), dp: 1 },
     { lab: '場均籃板', val: per('reb'), dp: 1 },
     { lab: '場均失誤', val: per('to'), dp: 1, lowerBetter: true },
