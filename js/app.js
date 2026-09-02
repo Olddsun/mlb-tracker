@@ -592,8 +592,7 @@ function lbBlocks(statDefs) {
     const rows = ranked.map((r, i) => `
       <div class="lb-row${r.v === bestV ? ' lead' : ''}">
         <span class="lb-rank mono">${i + 1}</span>
-        <span class="lb-dot" style="background:${playerColor(r.p)}"></span>
-        <span class="lb-name">${esc(r.p)}</span>
+        <span class="lb-name" style="color:${playerColor(r.p)}">${esc(r.p)}</span>
         <span class="lb-gap mono">${r.v === bestV
           ? `<span class="lb-badge">${st.lowerBetter ? '最低' : '領先'}</span>`
           : gap(r.v)}</span>
