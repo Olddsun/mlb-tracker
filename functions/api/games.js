@@ -19,7 +19,9 @@ export async function onRequest(context) {
     fetch(
       `${SUPABASE_URL}/rest/v1/games` +
       `?select=*,game_sides(*,batting_lines(*),pitching_lines(*)),game_notes(*)` +
-      `&order=played_at.desc,legacy_id.desc`,
+      // 同一天多場時的先後：AI 提交的用上傳時間（沒有 legacy_id），
+      // 舊的遷移資料 created_at 全部一樣（同批寫入），只能靠 legacy_id 的流水號
+      `&order=played_at.desc,created_at.desc,legacy_id.desc`,
       { headers }
     ),
     fetch(`${SUPABASE_URL}/rest/v1/players?select=id,display_name&order=id.asc`, { headers }),
