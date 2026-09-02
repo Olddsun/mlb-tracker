@@ -75,6 +75,34 @@
   .assign-box select, .assign-box input[type=text] { background: var(--bg); }
   .new-player-input { margin-top: 8px; }
 
+  /* 必填提示：沒選滿之前整張卡用黃框標出來 */
+  .assign-box { transition: border-color .2s, box-shadow .2s; }
+  .assign-box.incomplete {
+    border-color: rgba(232, 196, 75, 0.55);
+    box-shadow: 0 0 0 3px rgba(232, 196, 75, 0.1);
+  }
+  .assign-box.incomplete select { border-color: rgba(232, 196, 75, 0.45); }
+  .assign-hd {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 15px; font-weight: 700; margin-bottom: 14px;
+  }
+  .assign-hd .req {
+    font-size: 11px; font-weight: 700; letter-spacing: .5px;
+    color: #0d0f14; background: var(--yellow);
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .assign-note { margin-top: 13px; font-size: 12.5px; color: var(--yellow); line-height: 1.5; }
+  .assign-box:not(.incomplete) .assign-note { display: none; }
+  @keyframes assign-shake {
+    10%, 90% { transform: translateX(-2px); }
+    30%, 70% { transform: translateX(4px); }
+    50% { transform: translateX(-4px); }
+  }
+  .assign-box.shake { animation: assign-shake .45s ease; }
+  @media (prefers-reduced-motion: reduce) {
+    .assign-box.shake { animation: none; }
+  }
+
   /* 核對數據畫面 */
   .rv-hint { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
   .rv-tm { font-size: 12px; color: var(--muted); }
@@ -327,7 +355,8 @@ function renderGrid() {
       <div class="rm" onclick="removeImage(event, ${i})" role="button" aria-label="移除截圖 ${i + 1}">✕</div>
     </div>`
   }).join('')
-  const addSlot = `<div class="img-slot add" onclick="triggerSingleSelect(-1)" role="button" aria-label="追加截圖"><span class="plus">＋</span></div>`
+  // 「＋」開相簿多選（可一次再加好幾張）；要換掉某一張才是點該張縮圖走單選
+  const addSlot = `<div class="img-slot add" onclick="triggerMultiSelect()" role="button" aria-label="從相簿再選截圖，可一次多選"><span class="plus">＋</span></div>`
   grid.innerHTML = thumbs + addSlot
   document.getElementById('img-count').textContent = images.length ? `已選 ${images.length} 張` : ''
   document.getElementById('img-hint').style.display = images.length ? 'block' : 'none'
@@ -424,7 +453,8 @@ function showReview(data) {
       <div class="score-vs">VS</div>
       <div><div class="score-player">主隊</div><div class="rv-tm">${esc(g.homeTeam)}</div><div class="score-num ${awayWon ? '' : 'winner'}">${g.homeScore}</div></div>
     </div>
-    <div class="assign-box">
+    <div class="assign-box incomplete" id="assign-box">
+      <div class="assign-hd">指定玩家<span class="req">必填</span></div>
       <div class="assign-row">
         <div class="assign-label">客隊 <b>${esc(g.awayTeam)}</b>（${g.awayScore} 分）是誰打的？</div>
         ${playerSelect('away')}
@@ -433,6 +463,7 @@ function showReview(data) {
         <div class="assign-label">主隊 <b>${esc(g.homeTeam)}</b>（${g.homeScore} 分）是誰打的？</div>
         ${playerSelect('home')}
       </div>
+      <div class="assign-note" id="assign-note">⚠️ 兩隊都選好玩家，才能記錄這場比賽</div>
     </div>
     ${g.playerOfGame ? `<div class="rv-pog">★ 單場最佳：${esc(g.playerOfGame.name)}（${esc(g.playerOfGame.team)}）</div>` : ''}
     ${g.sport === 'nba2k' ? `
@@ -467,18 +498,39 @@ function assignValue(side) {
   return v === '__new__' ? document.getElementById('new-' + side).value.trim() : v
 }
 
-function refreshConfirm() {
+// 兩隊都指定、且不是同一人，才算填完
+function assignReady() {
   const h = assignValue('home'), a = assignValue('away')
-  const ok = h && a && h.toLowerCase() !== a.toLowerCase()
+  return { h, a, ok: !!(h && a && h.toLowerCase() !== a.toLowerCase()) }
+}
+
+function refreshConfirm() {
+  const { h, a, ok } = assignReady()
   const btn = document.getElementById('rv-confirm')
   if (btn) {
     btn.disabled = !ok
     btn.textContent = ok ? '確認無誤，記錄這場' : (h && a ? '兩隊不能是同一位玩家' : '先選好兩隊是誰')
   }
+  const box = document.getElementById('assign-box')
+  if (box) box.classList.toggle('incomplete', !ok)
+  const note = document.getElementById('assign-note')
+  if (note) note.textContent = (h && a && h.toLowerCase() === a.toLowerCase())
+    ? '⚠️ 兩隊不能是同一位玩家'
+    : '⚠️ 兩隊都選好玩家，才能記錄這場比賽'
+}
+
+// 沒填完就按了 → 捲到指定玩家那張卡、抖一下提醒
+function flagAssignMissing() {
+  const box = document.getElementById('assign-box')
+  if (!box) return
+  box.classList.add('incomplete', 'shake')
+  box.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  setTimeout(() => box.classList.remove('shake'), 500)
 }
 
 // 使用者按確認 → 帶上玩家指定，才真正寫入正式資料
 async function commitGame() {
+  if (!assignReady().ok) return flagAssignMissing()   // 按鈕理應是 disabled，這裡再擋一次
   const btn = document.getElementById('rv-confirm')
   if (btn) { btn.disabled = true; btn.textContent = '記錄中…' }
   try {
