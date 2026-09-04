@@ -175,19 +175,33 @@ Scott 問「10 個會不會太多？評估點是什麼？」——從「希望�
 
 ## 6. 待決定（下次開工從這裡開始）
 
-### 🔵 App 名稱（最優先，會影響 bundle ID 與 Supabase 專案名）
+### ✅ App 名稱：Boxie（2026-09-05 Scott 拍板）
 
-Scott 覺得「ESL」太直接，想要能呼應功能、有趣味的名字。候選（Claude 推薦順序）：
+取自 box score 的暱稱化，可愛好記、棒球籃球都通，與 ivey 同一種「圈內術語」品味。
 
-| 名稱 | 優點 | 缺點 |
-|------|------|------|
-| **Couch League（沙發聯盟）** ⭐ | 描述場景不是功能：朋友窩在沙發上打電動卻認真記戰績。有溫度、不限運動、中英文都成立 | 沒直接說「記錄」 |
-| **Boxie** | 從 box score 來的暱稱，可愛好記，棒球籃球都通 | 不懂 box score 的人不知道在講什麼 |
-| **StatSnap** | 直接點出「截圖變數據」，最容易被理解 | 工具感重，少了朋友的味道 |
-| **Tally** | 極短好念，有「一筆一筆累積」的感覺 | 太通用，App Store 撞名機率高，要先查 |
+**可用性查證（2026-09-05，用 Apple iTunes Search API + dig 實查）：**
 
-Scott 原本想的 **BoxScorer**：不差，但唸起來卡；中文「計分員」很好，
-但英文對應的 Scorekeeper 太通用。
+| 項目 | 結果 |
+|------|------|
+| App Store「Boxie」單字 | ❌ 已佔用（台灣區有 Absolutist Ltd 的「Boxie：虛擬寵物」，日本另有 BOXIE 益智遊戲） |
+| App Store「Boxie League」 | ✅ 查無同名 |
+| `boxieleague.com` / `boxie.gg` / `boxie.tw` / `boxie.day` | ✅ 查無 NS，看似未註冊 |
+| `boxie.app` / `playboxie.com` | ❌ 已註冊 |
+
+**採用方案：**
+- 品牌／口頭／App 內自稱 → **Boxie**
+- App Store 上架名稱 → **Boxie League**（Apple 允許「Boxie + 修飾字」，現有 `Boxie Admin`、`Boxie: Box Inventory` 都是這樣過的）
+- 副標（30 字元）→ 朋友之間的電玩戰績紀錄
+- 網域 → **boxieleague.com**（隱私政策與支援頁放這，上架必填）
+
+**為什麼可以接受撞名**：這個 App 靠朋友邀請獲客，不是靠 App Store 搜尋。
+新使用者拿到的是邀請連結／邀請碼，不會去搜尋框打「Boxie」，所以搜尋結果第一個是虛擬寵物遊戲影響很小。
+
+⚠️ **商標未清**：有一家 Boxie Inc.（智慧取物櫃）。不同領域、實務衝突機率低，
+但若要正式註冊商標需請專業人士查。Claude 非律師，這名字不是完全乾淨的。
+
+未採用的候選：Couch League（場景感最強但較長）、Statline（App Store 已有同名）、
+Elias（致敬 Elias Sports Bureau，App Store 看似空的但同產業商標風險較高）、Tally（太通用）。
 
 ### 🔵 其他未決
 - **比賽排序規則**：目前線上是「日期新到舊 → 同日上傳時間新到舊」。
