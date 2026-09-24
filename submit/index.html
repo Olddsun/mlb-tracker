@@ -112,11 +112,18 @@
   .rv-team-hd { font-size: 14px; font-weight: 700; margin: 12px 0 6px; }
   .rv-team-hd span { color: var(--muted); font-weight: 500; font-size: 13px; }
   .rv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 8px; }
-  .rv-tbl { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 13px; }
-  .rv-tbl td.l, .rv-tbl th.l { white-space: nowrap; padding-right: 16px; }
-  .rv-tbl th { color: var(--muted); font-weight: 600; font-size: 11px; padding: 4px 6px; text-align: center; border-bottom: 1px solid var(--border); }
+  /* 欄位跟截圖一致（打者 AB R H RBI BB SO／投手 IP H R ER BB SO）：
+     數字欄固定窄寬、名字欄吃剩下的寬度並以省略號收尾，375px 也不用左右捲；.rv-scroll 留著當保險 */
+  .rv-tbl { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .rv-tbl th.n, .rv-tbl td.n { width: 34px; }
+  .rv-tbl th.ip, .rv-tbl td.ip { width: 38px; }
+  .rv-tbl td.l, .rv-tbl th.l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+  .rv-tbl td.l small { display: block; color: var(--muted); font-size: 12px; line-height: 1.25; margin-top: 1px; }   /* 勝敗註記另起一行，名字欄窄也不會被省略號吃掉 */
+  .rv-tbl th { color: var(--muted); font-weight: 600; font-size: 12px; padding: 4px 2px; text-align: center; border-bottom: 1px solid var(--border); }
   .rv-tbl th.l, .rv-tbl td.l { text-align: left; }
-  .rv-tbl td { padding: 5px 6px; text-align: center; color: var(--text); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rv-tbl td { padding: 6px 2px; text-align: center; color: var(--text); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rv-note { font-size: 12px; color: var(--muted); margin: -2px 0 10px; line-height: 1.5; }
+  .rv-note b { color: var(--text); font-weight: 600; }
 
   /* NBA 2K 球隊數據對照表 */
   .nba-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
@@ -434,14 +441,20 @@ function showReview(data) {
     <input type="text" id="new-${side}" class="new-player-input" placeholder="輸入新玩家名字" maxlength="20"
       autocomplete="off" autocorrect="off" style="display:none" oninput="refreshConfirm()">`
 
+  // 全壘打跟截圖一樣不是表格欄位，照 box score 的寫法在打擊表下方列一行「HR：名字（×2）」
+  const hrLine = (batting) => {
+    const hrs = (batting || []).filter(b => (b.hr ?? 0) > 0).map(b => `${esc(b.name)}${b.hr > 1 ? ` ×${b.hr}` : ''}`)
+    return `<div class="rv-note"><b>HR：</b>${hrs.length ? hrs.join('、') : '無'}</div>`
+  }
   const teamBlock = (label, teamName, batting, pitching) => `
     <div class="rv-team">
       <div class="rv-team-hd">${esc(label)}　<span>${esc(teamName)}</span></div>
-      <div class="rv-scroll"><table class="rv-tbl"><thead><tr><th class="l">打者</th><th>AB</th><th>H</th><th>HR</th><th>RBI</th></tr></thead><tbody>
-        ${(batting || []).map(b => `<tr><td class="l">${esc(b.name)}</td><td>${b.ab ?? 0}</td><td>${b.h ?? 0}</td><td>${b.hr ?? 0}</td><td>${b.rbi ?? 0}</td></tr>`).join('')}
+      <div class="rv-scroll"><table class="rv-tbl"><thead><tr><th class="l">打者</th><th class="n">AB</th><th class="n">R</th><th class="n">H</th><th class="n">RBI</th><th class="n">BB</th><th class="n">SO</th></tr></thead><tbody>
+        ${(batting || []).map(b => `<tr><td class="l">${esc(b.name)}</td><td class="n">${b.ab ?? 0}</td><td class="n">${b.r ?? 0}</td><td class="n">${b.h ?? 0}</td><td class="n">${b.rbi ?? 0}</td><td class="n">${b.bb ?? 0}</td><td class="n">${b.so ?? 0}</td></tr>`).join('')}
       </tbody></table></div>
-      <div class="rv-scroll"><table class="rv-tbl"><thead><tr><th class="l">投手</th><th>IP</th><th>H</th><th>ER</th><th>SO</th></tr></thead><tbody>
-        ${(pitching || []).map(p => `<tr><td class="l">${esc(p.name)}${p.decision ? ` (${esc(p.decision)})` : ''}</td><td>${esc(p.ip ?? '')}</td><td>${p.h ?? 0}</td><td>${p.er ?? 0}</td><td>${p.so ?? 0}</td></tr>`).join('')}
+      ${hrLine(batting)}
+      <div class="rv-scroll"><table class="rv-tbl"><thead><tr><th class="l">投手</th><th class="ip">IP</th><th class="n">H</th><th class="n">R</th><th class="n">ER</th><th class="n">BB</th><th class="n">SO</th></tr></thead><tbody>
+        ${(pitching || []).map(p => `<tr><td class="l">${esc(p.name)}${p.decision ? ` <small>(${esc(p.decision)}${p.record ? `, ${esc(p.record)}` : ''})</small>` : ''}</td><td class="ip">${esc(p.ip ?? '')}</td><td class="n">${p.h ?? 0}</td><td class="n">${p.r ?? 0}</td><td class="n">${p.er ?? 0}</td><td class="n">${p.bb ?? 0}</td><td class="n">${p.so ?? 0}</td></tr>`).join('')}
       </tbody></table></div>
     </div>`
 
