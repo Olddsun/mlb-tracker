@@ -403,13 +403,13 @@ async function submitGame() {
   if (!images.length) return alert('請至少上傳 1 張截圖')
 
   showStep('step-processing')
-  setMsg('AI 解析中，約需 1 分鐘 ⏳　請留在此畫面、不要離開或關閉，否則會讀取失敗')
+  setMsg('AI 解析中，最多約 1 分鐘 ⏳　請留在此畫面、不要離開或關閉，否則會讀取失敗')
 
   try {
     const formData = new FormData()
     images.forEach((img, i) => formData.append(`image_${i}`, img, `${i}.jpg`))
 
-    // 後端同步解析完回應（約 30 秒），回來是解析結果讓你先核對＋指定玩家，不會直接記錄
+    // 後端同步解析完回應（約 1 分鐘），回來是解析結果讓你先核對＋指定玩家，不會直接記錄
     const res = await fetch('/api/submit-game', { method: 'POST', body: formData })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || '上傳失敗')

@@ -2,9 +2,10 @@
   "name": "mlb-tracker",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Static E-Sport League tracker for friends' MLB The Show match history.",
   "scripts": {
     "validate": "node scripts/validate-games.js",
-    "test": "npm run validate"
+    "test": "npm run validate && node scripts/test-submit-validate.mjs"
   }
 }

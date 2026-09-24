@@ -1,8 +1,10 @@
 // 解析模型：Haiku 4.5 讀手機拍電視的九列打擊表會整列錯位（同一組截圖上傳四次、錯的格子都一樣），
-// 2026-09-25 改用 Opus 5。注意 thinking / output_config 兩個參數 Haiku 不支援，改回 Haiku 要一併拿掉。
-const PARSE_MODEL = 'claude-opus-5'
-// 第一次解析沒過驗證時，只有在還來得及的情況下才重讀一次（整個請求要在約 100 秒內回完）
-const RETRY_BUDGET_MS = 40_000
+// 2026-09-25 起改用 Sonnet 5，並靠 validateMlbTables 的硬性對帳把讀錯的擋下來（讀不準頂多重傳，不會寫錯資料）。
+// 注意 thinking / output_config 兩個參數 Haiku 不支援，改回 Haiku 要一併拿掉。
+const PARSE_MODEL = 'claude-sonnet-5'
+
+// 數字欄位統一轉整數（模型偶爾回字串、缺欄位當 0）
+const toInt = v => { const n = typeof v === 'number' ? v : parseInt(v); return isNaN(n) ? 0 : n }
 
 export async function onRequest(context) {
   const { request } = context
@@ -164,17 +166,9 @@ async function processGame(env, submissionId, imageBuffers) {
     // 轉 base64
     const imageBase64s = imageBuffers.map(buf => bufToBase64(buf))
 
-    // 解析 → 逐局補正 → 硬性驗證（打擊／投手表逐欄加總對 TOTALS、勝敗投手唯一…）。
-    // 沒過而且時間還夠，就把「哪裡對不上」回饋給模型重讀一次；再沒過就如實回報，不寫入。
-    const t0 = Date.now()
-    let parsed = await parseWithModel(env, PARSE_MODEL, imageBase64s, imageBuffers.length)
-    let validationError = prepareParsed(parsed)
-    if (validationError && Date.now() - t0 < RETRY_BUDGET_MS) {
-      const retry = await parseWithModel(env, PARSE_MODEL, imageBase64s, imageBuffers.length, validationError)
-      const retryError = prepareParsed(retry)
-      if (!retryError) { parsed = retry; validationError = null }
-      else validationError = retryError
-    }
+    // 解析 → 逐局補正 → 硬性驗證（打擊／投手表逐欄加總對 TOTALS、勝敗投手唯一…），沒過就如實回報、不寫入
+    const parsed = await parseWithModel(env, imageBase64s)
+    const validationError = prepareParsed(parsed)
     if (validationError) throw new Error(validationError)
 
     const duplicates = await detectDuplicates(SUPABASE_URL, sbHeaders, parsed)
@@ -201,9 +195,10 @@ async function processGame(env, submissionId, imageBuffers) {
   }
 }
 
-// ── Claude Vision 解析（可指定模型）────────────────────────────
+// ── Claude Vision 解析 ─────────────────────────────────────────
 
-async function parseWithModel(env, model, imageBase64s, imageCount, feedback = null) {
+async function parseWithModel(env, imageBase64s) {
+  const imageCount = imageBase64s.length
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -212,8 +207,8 @@ async function parseWithModel(env, model, imageBase64s, imageCount, feedback = n
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model,
-      max_tokens: 12000,                       // thinking 也算在裡面，太小 JSON 會被截斷
+      model: PARSE_MODEL,
+      max_tokens: 16000,                       // thinking 也算在裡面，太小 JSON 會被截斷
       thinking: { type: 'adaptive' },
       output_config: { effort: 'medium' },     // 讀表格靠的是看圖，不用想太久；high 會拖長回應時間
       system: `你是對戰遊戲 box score 截圖解析器，任務是把截圖裡的數字「一字不差」地讀出來。給你 ${imageCount} 張截圖（順序不固定）。嚴格照下列規則：
@@ -238,8 +233,8 @@ async function parseWithModel(env, model, imageBase64s, imageCount, feedback = n
 【逐局比分 line_score】
 - 上面那隊是客隊(away)、下面那隊是主隊(home)。主客只看逐局表的上下順序，不要用 logo、隊名出現的先後或其他畫面判斷。
 - 逐局表最上面那排是「局數編號」，每一欄都要對照編號讀。延長賽時畫面會往右捲、只顯示最後 9 局（例如編號 3、4、…、11，第 1–2 局不在畫面上）。innings 只填畫面上看得到的欄、不要自己補被捲掉的局；把最右邊那欄的局數編號填進 last_inning_number（正常 9 局賽是 9、11 局延長賽是 11），程式會據此推算被捲掉的局數。
-- 逐局表右側的 R、H、E 三欄照隊伍填進 line_score（H 是全隊安打數，程式會拿來跟打擊表對帳）。
-- 可能是延長賽（超過 9 局），有幾欄就讀幾欄。主隊贏球沒打下半局會顯示 "X"（當 0 算）。
+  主隊贏球沒打下半局會顯示 "X"，照填 "X"（當 0 算）。
+- 逐局表右側的 R、H、E 三欄照隊伍填進 line_score（R 要等於該隊總分；H 是全隊安打數，程式會拿來跟打擊表對帳；E 是失誤數）。
 - ⚠️ 逐局那排最左邊的「第 1 局」常被隊名面板擋住 —— R（總分）才是準的。
 
 ★ 記錄比分前，兩隊都要各做一次「累計驗算」，這是最重要的一步：
@@ -255,7 +250,7 @@ async function parseWithModel(env, model, imageBase64s, imageCount, feedback = n
      - 累計「大於」R：代表某一局讀多了（常見是把兩位數看錯、或欄位對錯格）。
        務必回頭重讀，不可以直接改 R 去遷就，也不可以隨便刪掉某局的分數。
   5. 兩隊各自都要通過這個驗算，才可以輸出 innings 與 home_score / away_score。
-- 交叉檢查：勝負要與 R 一致；投手表每隊的失分(R)加總，也要等於對手的總分。三者對不上就重讀。
+- 交叉檢查：勝負要與 R 一致，對不上就重讀。
 
 【打擊表 batting】欄位固定為 AB、R、H、RBI、BB、SO、AVG。
 - ⚠️ 逐列讀法：先鎖定一位打者的名字，沿「同一列」往右讀完 AB→SO 七個數字，才換下一位。截圖是手機拍電視、常有角度，數字那幾欄看起來會比名字略高或略低——一律以名字所在那一列為準，不可以拿上一列或下一列的數字來用。九位打者讀完後，再讀最下方的 TOTALS 列。
@@ -263,9 +258,10 @@ async function parseWithModel(env, model, imageBase64s, imageCount, feedback = n
 - ⚠️ 打擊表沒有 HR 欄位！全壘打要從表格下方「BATTING」區塊的「HR:」那行讀：列出的每個名字算 1 轟，同一名字出現多次或標「名字 2」就是多轟，據此填該打者的 hr。沒列到的人 hr = 0。
 - 盜壘從 BASERUNNING 的「SB:」讀（可含次數）。
 
-【投手表 pitching】欄位為 IP、H、R、ER、BB、SO、ERA，同樣以名字那一列為準逐列讀。投手名字後括號是勝敗註記：(W, 6-3)→decision "W"、record "6-3"；(L, 0-2)→"L"、"0-2"；(SV, 7)→"SV"、"7"；(HLD, 12)→"HLD"、"12"；(BS, 4)→"BS"（救援失敗）、"4"。沒有括號的投手 decision 填 null。BS 不是 W，不可以改成 W。
+【投手表 pitching】欄位為 IP、H、R、ER、BB、SO、ERA，同樣以名字那一列為準逐列讀。投手名字後括號是勝敗註記：(W, 6-3)→decision "W"、record "6-3"；(L, 0-2)→"L"、"0-2"；(SV, 7)→"SV"、"7"；(HLD, 12)→"HLD"、"12"；(BS, 4)→"BS"（救援失敗）、"4"。沒有括號的投手 decision 填 null。只有 BS 一個註記時就填 "BS"，不可以改成 W。
+- 同一位投手可能同時有兩個註記（例如 (BS, 2)(W, 3-1)：救援失敗後隊友又逆轉贏球）：decision 填 W 或 L 那個（勝敗優先），record 填它後面的戰績。
 - 整場只會有一位 W（在贏的那隊）和一位 L（在輸的那隊），讀到兩位 W 或兩位 L 就是讀錯了。
-- TOTALS 列同樣是對帳基準：各投手的 H、R、ER、BB、SO 逐欄加總要等於 TOTALS，把 TOTALS 列填進 pitching_totals。
+- TOTALS 列同樣是對帳基準：各投手的 IP、H、R、ER、BB、SO 逐欄加總要等於 TOTALS（IP 用棒球算法：7.1 + 1.2 = 9.0），把 TOTALS 列填進 pitching_totals。
 - 交叉對帳：每隊投手的 H 加總 = 對手打擊表的 H 加總、SO 加總 = 對手打擊表的 SO 加總；每位投手的 ER 不可能大於 R。
 - IP 是棒球格式（7.1 代表 7⅓局、0.2 代表 ⅔局、9.0 代表 9 局），原樣保留字串，絕不換算成小數。
 - 對帳：每隊投手的失分(R)加總，必須等於「對手」的總得分，不符就重讀。
@@ -281,7 +277,6 @@ async function parseWithModel(env, model, imageBase64s, imageCount, feedback = n
             type: 'image',
             source: { type: 'base64', media_type: 'image/jpeg', data: b64 },
           })),
-          ...(feedback ? [{ type: 'text', text: `⚠️ 你上一次讀這組截圖的結果，程式對帳時發現：「${feedback}」。請整份重新逐格讀，每一列的數字都要對應同一列的名字，讀完再做一次 TOTALS 對帳。` }] : []),
           { type: 'text', text: `回傳純 JSON。棒球（sport = "mlb"）格式：
 {
   "sport": "mlb",
@@ -356,14 +351,20 @@ function prepareParsed(p) {
 // 若逐局加總「多」於總分（可能真的看錯），不動它，交給 validateGame 擋下。
 function reconcileInnings(p) {
   const sum = arr => arr.reduce((s, v) => { const n = parseInt(v); return s + (isNaN(n) ? 0 : n) }, 0)
+  const note = msg => { p.needsReview = true; p.uncertainties = [...(Array.isArray(p.uncertainties) ? p.uncertainties : []), msg] }
   // 延長賽畫面會往右捲、只顯示最後 9 局：用最右欄的局數編號推算被捲掉的局數，前面補 "0" 佔位，
-  // 局數才會正確（戰報靠 innings.length > 9 判斷延長賽），差額也才會補在真正的第 1 局
+  // 局數才會正確（戰報靠 innings.length > 9 判斷延長賽），差額也才會補在真正的第 1 局。
+  // 兩隊被捲掉的局數一定相同，所以只在兩隊可見欄數一樣時才補；欄數不一樣代表某一隊少讀了一格
+  // （例如漏掉主隊的 "X"），硬補會把整排往右推錯一格，寧可不補、只提醒核對
+  const home = p.innings?.home, away = p.innings?.away
+  const bothArrays = Array.isArray(home) && Array.isArray(away) && home.length && away.length
+  if (bothArrays && home.length !== away.length) note(`兩隊逐局欄數不同（主隊 ${home.length} 欄、客隊 ${away.length} 欄），請對照截圖確認`)
   const last = parseInt(p.last_inning_number)
+  const hidden = (bothArrays && home.length === away.length && !isNaN(last) && last > home.length) ? last - home.length : 0
   for (const side of ['home', 'away']) {
     let innings = p.innings?.[side]
     const total = side === 'home' ? p.home_score : p.away_score
     if (!Array.isArray(innings) || !innings.length || typeof total !== 'number') continue
-    const hidden = (!isNaN(last) && last > innings.length) ? last - innings.length : 0
     if (hidden > 0) { innings = [...Array(hidden).fill('0'), ...innings]; p.innings[side] = innings }
     const diff = total - sum(innings)
     if (diff > 0) {
@@ -371,13 +372,9 @@ function reconcileInnings(p) {
       innings[0] = String((isNaN(first) ? 0 : first) + diff)   // 差額補回第 1 局
       // 補值等於「累計驗算沒過、由程式回推」，要讓使用者知道並核對，不能靜靜改掉
       const label = side === 'home' ? '主隊' : '客隊'
-      p.needsReview = true
-      p.uncertainties = [
-        ...(Array.isArray(p.uncertainties) ? p.uncertainties : []),
-        hidden > 0
-          ? `${label}第 1–${hidden} 局不在畫面上（截圖從第 ${hidden + 1} 局開始），這 ${hidden} 局共 ${diff} 分先記在第 1 局，請對照截圖確認`
-          : `${label}逐局加總比總分少 ${diff} 分，已把差額補在第 1 局，請對照截圖確認`,
-      ]
+      note(hidden > 0
+        ? `${label}第 1–${hidden} 局不在畫面上（截圖從第 ${hidden + 1} 局開始），這 ${hidden} 局共 ${diff} 分先記在第 1 局，請對照截圖確認`
+        : `${label}逐局加總比總分少 ${diff} 分，已把差額補在第 1 局，請對照截圖確認`)
     }
   }
 }
@@ -401,8 +398,11 @@ function validateGame(p) {
 // 打擊表／投手表的硬性對帳。以前只驗逐局加總，整列讀錯位（每個人拿到上一列的數字）也能通過，
 // 因為安打總數剛好沒變。現在逐欄對 TOTALS、對總分、對對手的表，任何一項不合就不讓它過。
 function validateMlbTables(p) {
-  const num = v => { const n = typeof v === 'number' ? v : parseInt(v); return isNaN(n) ? 0 : n }
+  const num = toInt
   const sumOf = (rows, k) => (rows ?? []).reduce((s, r) => s + num(r[k]), 0)
+  const outs = ip => { const [full, part] = String(ip ?? '0.0').split('.'); return num(full) * 3 + num(part) }
+  const outsOf = rows => (rows ?? []).reduce((s, pi) => s + outs(pi.ip), 0)
+  const ipStr = o => `${Math.floor(o / 3)}.${o % 3}`
   const sides = [
     { key: 'home', opp: 'away', label: '主隊', team: p.home_team, score: p.home_score, oppScore: p.away_score },
     { key: 'away', opp: 'home', label: '客隊', team: p.away_team, score: p.away_score, oppScore: p.home_score },
@@ -412,14 +412,18 @@ function validateMlbTables(p) {
     const bat = p.batting?.[s.key] ?? []
     const oppBat = p.batting?.[s.opp] ?? []
     const pit = p.pitching?.[s.key] ?? []
+    const lsR = p.line_score?.[s.key]?.r
+    if (lsR != null && num(lsR) !== s.score) return `${name} 逐局表 R（${num(lsR)}）與總分（${s.score}）不符`
 
     if (bat.length) {
+      // 打者可能超過 9 人（代打），表格要往下捲才看得到；沒拍到就會在這裡對不上
+      const missingHint = '可能有打者沒拍到（表格要往下捲）或整列讀錯位，請補拍後重傳'
       const totals = p.batting_totals?.[s.key]
       for (const k of ['ab', 'r', 'h', 'rbi', 'bb', 'so']) {
         if (totals && totals[k] != null && sumOf(bat, k) !== num(totals[k]))
-          return `${name} 打擊表 ${k.toUpperCase()} 逐人加總（${sumOf(bat, k)}）與 TOTALS（${num(totals[k])}）不符，可能有整列讀錯位`
+          return `${name} 打擊表 ${k.toUpperCase()} 逐人加總（${sumOf(bat, k)}）與 TOTALS（${num(totals[k])}）不符：${missingHint}`
       }
-      if (sumOf(bat, 'r') !== s.score) return `${name} 打者得分加總（${sumOf(bat, 'r')}）與總分（${s.score}）不符`
+      if (sumOf(bat, 'r') !== s.score) return `${name} 打者得分加總（${sumOf(bat, 'r')}）與總分（${s.score}）不符：${missingHint}`
       if (sumOf(bat, 'rbi') > s.score) return `${name} 打點加總（${sumOf(bat, 'rbi')}）超過總分（${s.score}）`
       const lsH = p.line_score?.[s.key]?.h
       if (lsH != null && sumOf(bat, 'h') !== num(lsH)) return `${name} 安打加總（${sumOf(bat, 'h')}）與逐局表 H（${num(lsH)}）不符`
@@ -433,6 +437,8 @@ function validateMlbTables(p) {
         if (totals && totals[k] != null && sumOf(pit, k) !== num(totals[k]))
           return `${name} 投手表 ${k.toUpperCase()} 逐人加總（${sumOf(pit, k)}）與 TOTALS（${num(totals[k])}）不符，可能有整列讀錯位`
       }
+      if (totals && totals.ip != null && outsOf(pit) !== outs(totals.ip))
+        return `${name} 投手表 IP 逐人加總（${ipStr(outsOf(pit))}）與 TOTALS（${totals.ip}）不符，可能有整列讀錯位`
       if (oppBat.length) {
         if (sumOf(pit, 'so') !== sumOf(oppBat, 'so')) return `${name} 投手三振加總（${sumOf(pit, 'so')}）與對手打者被三振數（${sumOf(oppBat, 'so')}）不符`
         if (sumOf(pit, 'h') !== sumOf(oppBat, 'h')) return `${name} 投手被安打加總（${sumOf(pit, 'h')}）與對手安打數（${sumOf(oppBat, 'h')}）不符`
@@ -442,10 +448,9 @@ function validateMlbTables(p) {
 
   // 主客順序：客隊投手面對的是主隊打者（下半局），主隊贏球不用打最後的下半局、再見安打也提早結束，
   // 所以「客隊投手的出局數」永遠 ≤「主隊投手的出局數」。反過來就是主客標反了（兩邊相等時看不出來）
-  const outs = ip => { const [full, part] = String(ip ?? '0.0').split('.'); return num(full) * 3 + num(part) }
-  const outsOf = side => (p.pitching?.[side] ?? []).reduce((s, pi) => s + outs(pi.ip), 0)
-  if ((p.pitching?.home ?? []).length && (p.pitching?.away ?? []).length && outsOf('away') > outsOf('home'))
-    return `客隊投手合計局數（${(outsOf('away') / 3).toFixed(1)}）比主隊投手（${(outsOf('home') / 3).toFixed(1)}）還多，主客可能標反了`
+  const homeOuts = outsOf(p.pitching?.home), awayOuts = outsOf(p.pitching?.away)
+  if (homeOuts && awayOuts && awayOuts > homeOuts)
+    return `客隊投手合計局數（${ipStr(awayOuts)}）比主隊投手（${ipStr(homeOuts)}）還多，主客可能標反了`
 
   // 勝敗投手：贏的那隊恰好一位 W、不能有 L；輸的那隊恰好一位 L、不能有 W（只驗有上傳投手表的那隊）
   const homeWon = p.home_score > p.away_score
@@ -530,7 +535,7 @@ async function writeGame(SUPABASE_URL, headers, p, submissionId) {
       home_away: isHome ? 'home' : 'away',
       runs: isHome ? p.home_score : p.away_score,
       hits: (batting ?? []).reduce((s, b) => s + (b.h ?? 0), 0),
-      errors: 0,
+      errors: toInt(p.line_score?.[isHome ? 'home' : 'away']?.e),   // 逐局表的 E
       innings: isHome ? (p.innings?.home ?? []) : (p.innings?.away ?? []),
     }
     if (p.sport === 'nba2k') sideRow.stats = (isHome ? p.team_stats?.home : p.team_stats?.away) ?? {}
@@ -638,5 +643,5 @@ function buildWarnings(sub) {
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 
-// 供本機測試腳本匯入（Cloudflare 只會用 onRequest）
+// 供 scripts/test-submit-validate.mjs 匯入做回歸測試（Cloudflare 只會用 onRequest）
 export { validateGame, reconcileInnings, prepareParsed }

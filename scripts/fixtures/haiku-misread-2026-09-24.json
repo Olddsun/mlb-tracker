@@ -1,0 +1,381 @@
+{
+ "notes": {
+  "hr": [
+   "Mickey Gasper",
+   "Adley Rutschman",
+   "Brandon Lowe"
+  ],
+  "sb": [
+   {
+    "name": "Konnor Griffin",
+    "count": 1
+   }
+  ],
+  "batting_summary": {
+   "away_2b": [],
+   "home_2b": [
+    "Roman Anthony",
+    "Caleb Durbin"
+   ]
+  }
+ },
+ "sport": "mlb",
+ "batting": {
+  "away": [
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".000",
+    "pos": "SS",
+    "rbi": 0,
+    "name": "Konnor Griffin"
+   },
+   {
+    "h": 2,
+    "r": 1,
+    "ab": 5,
+    "bb": 0,
+    "hr": 1,
+    "so": 1,
+    "avg": ".400",
+    "pos": "2B",
+    "rbi": 1,
+    "name": "Brandon Lowe"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 1,
+    "avg": ".000",
+    "pos": "LF",
+    "rbi": 0,
+    "name": "Billy Cook"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 3,
+    "avg": ".000",
+    "pos": "CF",
+    "rbi": 0,
+    "name": "Onsil Cruz"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 3,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".000",
+    "pos": "DH",
+    "rbi": 0,
+    "name": "Ryan O'Hearn"
+   },
+   {
+    "h": 1,
+    "r": 1,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 0,
+    "avg": ".250",
+    "pos": "3B",
+    "rbi": 0,
+    "name": "Nick Gonzales"
+   },
+   {
+    "h": 1,
+    "r": 1,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 0,
+    "avg": ".250",
+    "pos": "C",
+    "rbi": 0,
+    "name": "Rafael Flores"
+   },
+   {
+    "h": 1,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".250",
+    "pos": "1B",
+    "rbi": 2,
+    "name": "Spencer Horwitz"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 3,
+    "bb": 1,
+    "hr": 0,
+    "so": 0,
+    "avg": ".000",
+    "pos": "RF",
+    "rbi": 0,
+    "name": "Jake Mangum"
+   }
+  ],
+  "home": [
+   {
+    "h": 2,
+    "r": 0,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 1,
+    "avg": ".400",
+    "pos": "LF",
+    "rbi": 0,
+    "name": "Roman Anthony"
+   },
+   {
+    "h": 1,
+    "r": 2,
+    "ab": 5,
+    "bb": 0,
+    "hr": 1,
+    "so": 1,
+    "avg": ".200",
+    "pos": "DH",
+    "rbi": 1,
+    "name": "Mickey Gasper"
+   },
+   {
+    "h": 1,
+    "r": 1,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".200",
+    "pos": "C",
+    "rbi": 2,
+    "name": "Adley Rutschman"
+   },
+   {
+    "h": 1,
+    "r": 1,
+    "ab": 5,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".200",
+    "pos": "1B",
+    "rbi": 2,
+    "name": "Wilson Contreras"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".000",
+    "pos": "RF",
+    "rbi": 0,
+    "name": "Wilyer Abreu"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 1,
+    "avg": ".000",
+    "pos": "SS",
+    "rbi": 0,
+    "name": "Trevor Story"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 3,
+    "avg": ".000",
+    "pos": "CF",
+    "rbi": 0,
+    "name": "Jarren Duran"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 1,
+    "avg": ".000",
+    "pos": "3B",
+    "rbi": 0,
+    "name": "Caleb Durbin"
+   },
+   {
+    "h": 1,
+    "r": 0,
+    "ab": 4,
+    "bb": 0,
+    "hr": 0,
+    "so": 2,
+    "avg": ".250",
+    "pos": "2B",
+    "rbi": 0,
+    "name": "Nick Sogard"
+   }
+  ]
+ },
+ "innings": {
+  "away": [
+   "0",
+   "0",
+   "0",
+   "0",
+   "2",
+   "1",
+   "0",
+   "0",
+   "0"
+  ],
+  "home": [
+   "2",
+   "0",
+   "0",
+   "1",
+   "0",
+   "0",
+   "0",
+   "0",
+   "1"
+  ]
+ },
+ "pitching": {
+  "away": [
+   {
+    "h": 5,
+    "r": 3,
+    "bb": 0,
+    "er": 3,
+    "ip": "8.1",
+    "so": 13,
+    "era": "3.24",
+    "name": "Paul Skanes",
+    "record": null,
+    "decision": null
+   },
+   {
+    "h": 1,
+    "r": 3,
+    "bb": 0,
+    "er": 3,
+    "ip": "2.2",
+    "so": 2,
+    "era": "0.00",
+    "name": "Luke Weaver",
+    "record": "4-4",
+    "decision": "L"
+   }
+  ],
+  "home": [
+   {
+    "h": 4,
+    "r": 2,
+    "bb": 1,
+    "er": 2,
+    "ip": "7.0",
+    "so": 6,
+    "era": "2.57",
+    "name": "Sonny Gray",
+    "record": null,
+    "decision": null
+   },
+   {
+    "h": 1,
+    "r": 1,
+    "bb": 1,
+    "er": 1,
+    "ip": "2.1",
+    "so": 6,
+    "era": "2.57",
+    "name": "Garrett Whitlock",
+    "record": "4-3",
+    "decision": "W"
+   },
+   {
+    "h": 0,
+    "r": 0,
+    "bb": 1,
+    "er": 0,
+    "ip": "1.2",
+    "so": 3,
+    "era": "3.86",
+    "name": "Aroldis Chapman",
+    "record": "5-3",
+    "decision": "W"
+   }
+  ]
+ },
+ "away_team": "Pirates",
+ "home_team": "Red Sox",
+ "away_score": 3,
+ "fatalError": false,
+ "home_score": 4,
+ "image_roles": [
+  {
+   "role": "postgame_summary",
+   "team": "Red Sox",
+   "index": 0,
+   "confidence": "high"
+  },
+  {
+   "role": "batting",
+   "team": "Red Sox",
+   "index": 1,
+   "confidence": "high"
+  },
+  {
+   "role": "batting_and_pitching",
+   "team": "Red Sox",
+   "index": 2,
+   "confidence": "high"
+  },
+  {
+   "role": "batting",
+   "team": "Pirates",
+   "index": 3,
+   "confidence": "high"
+  },
+  {
+   "role": "batting_and_pitching",
+   "team": "Pirates",
+   "index": 4,
+   "confidence": "high"
+  }
+ ],
+ "needsReview": true,
+ "uncertainties": [
+  "主隊逐局加總比總分少 2 分，已把差額補在第 1 局，請對照截圖確認"
+ ],
+ "player_of_game": {
+  "name": "Mickey Gasper",
+  "team": "Red Sox"
+ },
+ "fatalErrorMessage": null
+}
