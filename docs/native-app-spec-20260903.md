@@ -6,6 +6,16 @@
 
 ---
 
+## 決策更新（2026-10-25）
+
+- **技術棧確定走 Expo（RN）**。9/25 一度想改 Swift 原生，10/25 放棄：Swift 必須在本機裝 Xcode（30 GB 以上，Scott 的 Mac 空間一直不夠），Swift Playgrounds 做不了 Share Extension／Widget，雲端 build 又沒有本機模擬器。Expo 走 EAS 雲端 build、手機跑開發版，跟 ivey／ivey Home 同一套；ivey Home 已經做過 Supabase 的 Apple＋Google 登入、App 內刪帳號，可直接當範本。
+- **網頁版不加登入／密碼**（2026-10-25 Scott 決定）。Google 登入＋邀請碼的程式與企劃留在 branch `feat/google-login`（未 push、未上線）備用，要用再拿出來。目前線上三個洞照舊，靠每日備份（private repo `Olddsun/esl-backup`）止血。
+- **現有資料要轉進 App**（33 場、4 位玩家：Scott／Alvin／Vincent／Allen），轉移時每人用帳號登入一次認領自己的玩家。
+- **App 名稱重新討論中**：Scott 擔心 Boxie 聽起來像拳擊 App。候選（App Store 台灣區查無同名）：Couch League、Sweep League、Linescore；詳見 2026-10-25 對話與記憶 `mlb_tracker`。
+- 已查：boxieleague.com 至 2026-10-25 仍未被註冊。
+
+---
+
 ## 0. 先處理：現在線上就有的風險
 
 這三件事跟原生 App 無關，是目前 PWA 已經存在的問題。
